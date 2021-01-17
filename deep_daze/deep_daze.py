@@ -50,6 +50,7 @@ class DeepDaze(nn.Module):
         super().__init__()
         self.loss_coef = loss_coef
         self.image_width = image_width
+        self.sizing_schedule_counter = 0
 
         self.model = SirenWrapper(
             SirenNet(
@@ -70,10 +71,8 @@ class DeepDaze(nn.Module):
         if not return_loss:
             return out
 
-        cutn = 64
         pieces = []
-        for ch in range(cutn):
-            size = torch.randint(int(.5 * width), int(.98 * width), ())
+        for size in self.sample_sizes():
             offsetx = torch.randint(0, width - size, ())
             offsety = torch.randint(0, width - size, ())
             apper = out[:, :, offsetx:offsetx + size, offsety:offsety + size]
@@ -88,6 +87,42 @@ class DeepDaze(nn.Module):
 
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim = -1).mean()
         return loss
+
+    def sample_sizes(self):
+        self.sizing_schedule_counter+=1
+        counter = self.sizing_schedule_counter
+        pieces_per_group = 4
+        # 6 piece schedule increasing in context as model saturates
+        if counter<500:
+            partition = [4,5,3,2,1,1]
+        elif counter<1000:
+            partition = [2,5,4,2,2,1]
+        elif counter<1500:
+            partition = [1,4,5,3,2,1]
+        elif counter<2000:
+            partition = [1,3,4,4,2,2]
+        elif counter<2500:
+            partition = [1,2,2,4,4,3]
+        elif counter<3000:
+            partition = [1,1,2,3,4,5]
+        else:
+            partition = [1,1,1,2,4,7]
+
+        dbase = .38
+        step = .1
+        width = self.image_width
+
+        sizes = []
+        for part_index in range(len(partition)):
+            groups = partition[part_index]
+            for _ in range(groups*pieces_per_group):
+                sizes.append(torch.randint(
+                    int((dbase+step*part_index+.01)*width),
+                    int((dbase+step*(1+part_index))*width), ()))
+        # Sorting is quite helpful in regularizing the training inputs
+        sizes.sort()
+        return sizes
+
 
 class Imagine(nn.Module):
     def __init__(
@@ -110,7 +145,8 @@ class Imagine(nn.Module):
         self.scaler = GradScaler()
 
         self.text = text
-        self.filename = Path(f'./{self.text}.png')
+        textpath = self.text.replace(' ','_')
+        self.filename = Path(f'./{textpath}.png')
 
         self.encoded_text = tokenize(text).cuda()
         self.save_every = save_every
@@ -134,6 +170,6 @@ class Imagine(nn.Module):
     def forward(self):
         print(f'Imagining "{self.text}" from the depths of my weights...')
 
-        for epoch in trange(10000, desc = 'epochs'):
-            for i in trange(1000, desc = 'iteration'):
+        for epoch in trange(20, desc = 'epochs'):
+            for i in trange(1050, desc='iteration'):
                 self.train_step(epoch, i)
