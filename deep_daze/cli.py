@@ -3,7 +3,7 @@ from deep_daze import Imagine
 from pathlib import Path
 
 def train(text, num_layers = 8, deeper = False):
-    if better:
+    if deeper:
         num_layers = 16
 
     imagine = Imagine(
