@@ -48,10 +48,10 @@ $ imagine "shattered plates on the ground" --deeper
 
 ## Advanced
 
-In true deep learning fashion, more layers will yield better results. Default is at `8`, but can be increased to `16` depending on your resources.
+In true deep learning fashion, more layers will yield better results. Default is at `16`, but can be increased to `32` depending on your resources.
 
 ```bash
-$ imagine "stranger in strange lands" --num-layers 16
+$ imagine "stranger in strange lands" --num-layers 32
 ```
 
 If you would like to invoke it in code.
@@ -61,7 +61,7 @@ from deep_daze import Imagine
 
 imagine = Imagine(
     text = 'cosmic love and attention',
-    num_layers = 10
+    num_layers = 24
 )
 
 imagine()

@@ -21,8 +21,7 @@ assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep D
 RegConfig = namedtuple('RegConfig', ['num', 'ratio', 'downsized_image_size'])
 
 DEFAULT_REG_CONFIG = [
-    RegConfig(num = 48, ratio = (0.5, 0.95), downsized_image_size = None),
-    RegConfig(num = 16, ratio = (0.5, 0.95), downsized_image_size = 32),
+    RegConfig(num = 4, ratio = (0.5, 0.95), downsized_image_size = None),
 ]
 
 # helpers
@@ -125,10 +124,11 @@ class Imagine(nn.Module):
         self,
         text,
         *,
-        lr = 5e-6,
-        save_every = 150,
+        lr = 1e-5,
+        gradient_accumulate_every = 4,
+        save_every = 100,
         image_width = 512,
-        num_layers = 8,
+        num_layers = 16,
         reg_config = DEFAULT_REG_CONFIG
     ):
         super().__init__()
@@ -140,8 +140,10 @@ class Imagine(nn.Module):
         ).cuda()
 
         self.model = model
-        self.optimizer = Adam(model.parameters(), lr)
+
         self.scaler = GradScaler()
+        self.optimizer = Adam(model.parameters(), lr)
+        self.gradient_accumulate_every = gradient_accumulate_every
 
         self.text = text
         self.filename = Path(f'./{self.text}.png')
@@ -150,14 +152,15 @@ class Imagine(nn.Module):
         self.save_every = save_every
 
     def train_step(self, epoch, i):
-        self.optimizer.zero_grad()
 
-        with autocast():
-            loss = self.model(self.encoded_text)
+        for _ in range(self.gradient_accumulate_every):
+            with autocast():
+                loss = self.model(self.encoded_text)
+            self.scaler.scale(loss / self.gradient_accumulate_every).backward()
 
-        self.scaler.scale(loss).backward()
         self.scaler.step(self.optimizer)
         self.scaler.update()
+        self.optimizer.zero_grad()
 
         if i % self.save_every == 0:
             with torch.no_grad():
@@ -168,6 +171,6 @@ class Imagine(nn.Module):
     def forward(self):
         print(f'Imagining "{self.text}" from the depths of my weights...')
 
-        for epoch in trange(10000, desc = 'epochs'):
+        for epoch in trange(20, desc = 'epochs'):
             for i in trange(1000, desc = 'iteration'):
                 self.train_step(epoch, i)
