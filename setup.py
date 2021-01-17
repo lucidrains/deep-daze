@@ -8,7 +8,6 @@ setup(
   name = 'deep-daze',
   packages = find_packages(),
   include_package_data = True,
-  package_data = {'bpe': ['data/bpe_simple_vocab_16e6.txt']},
   entry_points={
     'console_scripts': [
       'imagine = deep_daze.cli:main',
