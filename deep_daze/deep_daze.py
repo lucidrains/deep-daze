@@ -129,7 +129,7 @@ class Imagine(nn.Module):
             with torch.no_grad():
                 al = normalize_image(self.model(self.encoded_text, return_loss = False).cpu())
                 torchvision.utils.save_image(al, str(self.filename))
-                print(f'image saved to {str(self.filename)}')
+                print(f'image updated at {str(self.filename)}')
 
     def forward(self):
         print(f'Imagining "{self.text}" from the depths of my weights...')
