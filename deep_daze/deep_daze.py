@@ -11,9 +11,34 @@ import torchvision
 from deep_daze.clip import load, tokenize, normalize_image
 from siren_pytorch import SirenNet
 
+from collections import namedtuple
 from einops import rearrange
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
+
+# constants
+
+RegConfig = namedtuple('RegConfig', ['num', 'ratio', 'downsized_image_size'])
+
+DEFAULT_REG_CONFIG = [
+    RegConfig(num = 64, ratio = (0.5, 0.95), downsized_image_size = None),
+]
+
+# helpers
+
+def exists(val):
+    return val is not None
+
+def interpolate(image, size):
+    return F.interpolate(image, (size, size), mode = 'bilinear', align_corners = False)
+
+def rand_cutout(image, ratio = (0.5, 0.95)):
+    lo, hi, width = *ratio, image.shape[-1]
+    size = torch.randint(int(lo * width), int(hi * width), ())
+    offsetx = torch.randint(0, width - size, ())
+    offsety = torch.randint(0, width - size, ())
+    cutout = image[:, :, offsetx:offsetx + size, offsety:offsety + size]
+    return cutout
 
 # load clip
 
@@ -45,7 +70,8 @@ class DeepDaze(nn.Module):
         self,
         num_layers = 8,
         image_width = 512,
-        loss_coef = 100
+        loss_coef = 100,
+        reg_config = DEFAULT_REG_CONFIG
     ):
         super().__init__()
         self.loss_coef = loss_coef
@@ -61,7 +87,9 @@ class DeepDaze(nn.Module):
             ),
             image_width = image_width,
             image_height = image_width
-        ).cuda()
+        )
+
+        self.reg_config = reg_config
 
     def forward(self, text, return_loss = True):
         width = self.image_width
@@ -70,15 +98,17 @@ class DeepDaze(nn.Module):
         if not return_loss:
             return out
 
-        cutn = 64
+        cutout_specs = self.reg_config
+
         pieces = []
-        for ch in range(cutn):
-            size = torch.randint(int(.5 * width), int(.98 * width), ())
-            offsetx = torch.randint(0, width - size, ())
-            offsety = torch.randint(0, width - size, ())
-            apper = out[:, :, offsetx:offsetx + size, offsety:offsety + size]
-            apper = torch.nn.functional.interpolate(apper, (224, 224), mode = 'bilinear', align_corners = False)
-            pieces.append(normalize_image(apper))
+
+        for (num_images, (lo, hi), downsize) in cutout_specs:
+            for _ in range(num_images):
+                cutout = rand_cutout(out, ratio = (lo, hi))
+                if exists(downsize):
+                    cutout = interpolate(cutout, downsize)
+                resized_cutout = interpolate(cutout, 224)
+                pieces.append(normalize_image(resized_cutout))
 
         image = torch.cat(pieces)
 
@@ -94,16 +124,19 @@ class Imagine(nn.Module):
         self,
         text,
         *,
-        lr = 1e-5,
+        lr = 5e-6,
         save_every = 150,
         image_width = 512,
-        num_layers = 8
+        num_layers = 8,
+        reg_config = DEFAULT_REG_CONFIG
     ):
         super().__init__()
+
         model = DeepDaze(
             image_width = image_width,
-            num_layers = num_layers
-        )
+            num_layers = num_layers,
+            reg_config = reg_config
+        ).cuda()
 
         self.model = model
         self.optimizer = Adam(model.parameters(), lr)
