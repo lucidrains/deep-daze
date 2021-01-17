@@ -85,3 +85,5 @@ Please join replication efforts for DALL-E for <a href="https://github.com/lucid
     primaryClass = {cs.CV}
 }
 ```
+
+[colab-notebook]: <https://colab.research.google.com/drive/1FoHdqoqKntliaQKnMoNs3yn5EALqWtvP>
