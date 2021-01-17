@@ -18,6 +18,12 @@ $ imagine "a house in the forest"
 
 That's it.
 
+If you have enough memory, you can get better quality by adding a `--deeper` flag
+
+```bash
+$ imagine "shattered plates on the ground" --deeper
+```
+
 ## Advanced
 
 In true deep learning fashion, more layers will yield better results. Default is at `8`, but can be increased to `16` depending on your resources.
