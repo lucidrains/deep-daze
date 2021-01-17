@@ -57,7 +57,7 @@ class DeepDaze(nn.Module):
                 dim_hidden = 256,
                 num_layers = num_layers,
                 dim_out = 3,
-                use_bias = False
+                use_bias = True
             ),
             image_width = image_width,
             image_height = image_width
