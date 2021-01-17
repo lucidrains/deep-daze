@@ -1,6 +1,20 @@
 ## Deep Daze
 
-Deep Daze - Simple command line tool for text to image generation using OpenAI's <a href="https://github.com/openai/CLIP">CLIP</a> and Siren. Credit goes to <a href="https://twitter.com/advadnoun">Ryan Murdock</a> for the discovery of this technique (and for coming up with the great name)!
+<img src="./samples/mist-over-green-hills.png" width="200px"></img>
+
+*mist over green hills*
+
+<img src="./samples/shattered-plates.png" width="200px"></img>
+
+*shattered plates on the grass*
+
+<img src="./samples/cosmic-love.png" width="200px"></img>
+
+*cosmic love and attention*
+
+## What is this?
+
+Simple command line tool for text to image generation using OpenAI's <a href="https://github.com/openai/CLIP">CLIP</a> and <a href="https://arxiv.org/abs/2006.09661">Siren</a>. Credit goes to <a href="https://twitter.com/advadnoun">Ryan Murdock</a> for the discovery of this technique (and for coming up with the great name)!
 
 This will require that you have an Nvidia GPU
 
