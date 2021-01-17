@@ -21,7 +21,8 @@ assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep D
 RegConfig = namedtuple('RegConfig', ['num', 'ratio', 'downsized_image_size'])
 
 DEFAULT_REG_CONFIG = [
-    RegConfig(num = 64, ratio = (0.5, 0.95), downsized_image_size = None),
+    RegConfig(num = 48, ratio = (0.5, 0.95), downsized_image_size = None),
+    RegConfig(num = 16, ratio = (0.5, 0.95), downsized_image_size = 32),
 ]
 
 # helpers
