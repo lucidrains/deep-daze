@@ -1,1 +1,1 @@
-include *.txt
+recursive-include deep_daze *.txt
