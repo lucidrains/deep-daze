@@ -22,7 +22,6 @@ setup(
   keywords = [
     'artificial intelligence',
     'deep learning',
-    'fire',
     'transformers',
     'implicit neural representations',
     'text to image'
@@ -30,6 +29,7 @@ setup(
   install_requires=[
     'torch>=1.7.1',
     'einops>=0.3',
+    'fire',
     'ftfy',
     'siren-pytorch>=0.0.7',
     'tqdm'
