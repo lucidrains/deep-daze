@@ -23,7 +23,7 @@ def train(
     )
 
     if imagine.filename.exists():
-        answer = input('Imagined image already exists, do you want to overwrite?').lower()
+        answer = input('Imagined image already exists, do you want to overwrite? (y/n) ').lower()
         if answer not in ('yes', 'y'):
             exit()
 
