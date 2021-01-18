@@ -12,6 +12,10 @@
 
 *cosmic love and attention*
 
+<img src="./samples/time-traveler.png" width="200px"></img>
+
+*a time traveler in the crowd*
+
 ## What is this?
 
 Simple command line tool for text to image generation using OpenAI's <a href="https://github.com/openai/CLIP">CLIP</a> and <a href="https://arxiv.org/abs/2006.09661">Siren</a>. Credit goes to <a href="https://twitter.com/advadnoun">Ryan Murdock</a> for the discovery of this technique (and for coming up with the great name)!
