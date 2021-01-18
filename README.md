@@ -20,6 +20,10 @@
 
 *life during the plague*
 
+<img src="./samples/peace-sunlit-forest.png" width="200px"></img>
+
+*meditative peace in a sunlit forest*
+
 ## What is this?
 
 Simple command line tool for text to image generation using OpenAI's <a href="https://github.com/openai/CLIP">CLIP</a> and <a href="https://arxiv.org/abs/2006.09661">Siren</a>. Credit goes to <a href="https://twitter.com/advadnoun">Ryan Murdock</a> for the discovery of this technique (and for coming up with the great name)!
