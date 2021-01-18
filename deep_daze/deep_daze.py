@@ -187,11 +187,14 @@ class Imagine(nn.Module):
         self.encoded_text = tokenize(text).cuda()
 
     def train_step(self, epoch, i):
+        total_loss = 0
 
         for _ in range(self.gradient_accumulate_every):
             with autocast():
                 loss = self.model(self.encoded_text)
-            self.scaler.scale(loss / self.gradient_accumulate_every).backward()
+            loss = loss / self.gradient_accumulate_every
+            total_loss += loss
+            self.scaler.scale(loss).backward()
 
         self.scaler.step(self.optimizer)
         self.scaler.update()
@@ -203,9 +206,13 @@ class Imagine(nn.Module):
                 torchvision.utils.save_image(al, str(self.filename))
                 print(f'image updated at "./{str(self.filename)}"')
 
+        return total_loss
+
     def forward(self):
         print(f'Imagining "{self.text}" from the depths of my weights...')
 
         for epoch in trange(self.epochs, desc = 'epochs'):
-            for i in trange(self.iterations, desc='iteration'):
-                self.train_step(epoch, i)
+            pbar = trange(self.iterations, desc='iteration')
+            for i in pbar:
+                loss = self.train_step(epoch, i)
+                pbar.set_description(f'loss: {loss.item():.2f}')
