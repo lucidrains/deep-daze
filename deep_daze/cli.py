@@ -13,7 +13,8 @@ def train(
     save_every = 100,
     image_width = 512,
     deeper = False,
-    overwrite = False
+    overwrite = False,
+    save_progress = False
 ):
     if deeper:
         num_layers = 32
@@ -26,7 +27,8 @@ def train(
         gradient_accumulate_every = gradient_accumulate_every,
         epochs = epochs,
         iterations = iterations,
-        save_every = save_every
+        save_every = save_every,
+        save_progress = save_progress
     )
 
     if not overwrite and imagine.filename.exists():
