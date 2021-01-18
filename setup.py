@@ -31,8 +31,7 @@ setup(
     'torch>=1.7.1',
     'einops>=0.3',
     'ftfy',
-    'numpy',
-    'siren-pytorch>=0.0.6',
+    'siren-pytorch>=0.0.7',
     'tqdm'
   ],
   classifiers=[

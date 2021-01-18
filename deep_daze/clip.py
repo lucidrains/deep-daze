@@ -219,16 +219,15 @@ def load(device = ("cuda" if torch.cuda.is_available() else "cpu")):
 
     return model, transform
 
-
-_tokenizer = SimpleTokenizer()
+tokenizer = SimpleTokenizer()
 
 def tokenize(texts, context_length: int = 77):
     if isinstance(texts, str):
         texts = [texts]
 
-    sot_token = _tokenizer.encoder["<|startoftext|>"]
-    eot_token = _tokenizer.encoder["<|endoftext|>"]
-    all_tokens = [[sot_token] + _tokenizer.encode(text) + [eot_token] for text in texts]
+    sot_token = tokenizer.encoder["<|startoftext|>"]
+    eot_token = tokenizer.encoder["<|endoftext|>"]
+    all_tokens = [[sot_token] + tokenizer.encode(text) + [eot_token] for text in texts]
     result = torch.zeros(len(all_tokens), context_length, dtype=torch.long)
 
     for i, tokens in enumerate(all_tokens):

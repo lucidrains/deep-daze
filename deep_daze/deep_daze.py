@@ -9,11 +9,28 @@ from tqdm import trange
 import torchvision
 
 from deep_daze.clip import load, tokenize, normalize_image
-from siren_pytorch import SirenNet
+from siren_pytorch import SirenNet, SirenWrapper
 
+from collections import namedtuple
 from einops import rearrange
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
+
+# helpers
+
+def exists(val):
+    return val is not None
+
+def interpolate(image, size):
+    return F.interpolate(image, (size, size), mode = 'bilinear', align_corners = False)
+
+def rand_cutout(image, ratio = (0.5, 0.95)):
+    lo, hi, width = *ratio, image.shape[-1]
+    size = torch.randint(int(lo * width), int(hi * width), ())
+    offsetx = torch.randint(0, width - size, ())
+    offsety = torch.randint(0, width - size, ())
+    cutout = image[:, :, offsetx:offsetx + size, offsety:offsety + size]
+    return cutout
 
 # load clip
 
@@ -21,24 +38,8 @@ perceptor, preprocess = load()
 
 # load siren
 
-class SirenWrapper(nn.Module):
-    def __init__(self, net, image_width, image_height):
-        super().__init__()
-        self.net = net
-        self.image_width = image_width
-        self.image_height = image_height
-
-        tensors = [torch.linspace(-1, 1, steps = image_width), torch.linspace(-1, 1, steps = image_height)]
-        mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
-        mgrid = rearrange(mgrid, 'h w c -> (h w) c')
-        self.register_buffer('grid', mgrid)
-
-    def forward(self):
-        coords = self.grid.clone().detach().requires_grad_()
-        out = self.net(coords)
-        out = rearrange(out, '(h w) c -> () c h w', h = self.image_height, w = self.image_width)
-        out = (out.tanh() + 1) * 0.5
-        return out
+def norm_siren_output(img):
+    return (img.tanh() + 1) * 0.5
 
 class DeepDaze(nn.Module):
     def __init__(
@@ -52,26 +53,29 @@ class DeepDaze(nn.Module):
         self.image_width = image_width
         self.sizing_schedule_counter = 0
 
+        siren = SirenNet(
+            dim_in = 2,
+            dim_hidden = 256,
+            num_layers = num_layers,
+            dim_out = 3,
+            use_bias = True
+        )
+
         self.model = SirenWrapper(
-            SirenNet(
-                dim_in = 2,
-                dim_hidden = 256,
-                num_layers = num_layers,
-                dim_out = 3,
-                use_bias = False
-            ),
+            siren,
             image_width = image_width,
             image_height = image_width
-        ).cuda()
+        )
 
     def forward(self, text, return_loss = True):
-        width = self.image_width
         out = self.model()
+        out = norm_siren_output(out)
 
         if not return_loss:
             return out
 
         pieces = []
+
         for size in self.sample_sizes():
             offsetx = torch.randint(0, width - size, ())
             offsety = torch.randint(0, width - size, ())
@@ -82,8 +86,8 @@ class DeepDaze(nn.Module):
         image = torch.cat(pieces)
 
         with autocast(enabled = False):
-          image_embed = perceptor.encode_image(image)
-          text_embed = perceptor.encode_text(text)
+            image_embed = perceptor.encode_image(image)
+            text_embed = perceptor.encode_text(text)
 
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim = -1).mean()
         return loss
@@ -130,19 +134,23 @@ class Imagine(nn.Module):
         text,
         *,
         lr = 1e-5,
-        save_every = 150,
+        gradient_accumulate_every = 4,
+        save_every = 100,
         image_width = 512,
-        num_layers = 8
+        num_layers = 16
     ):
         super().__init__()
+
         model = DeepDaze(
             image_width = image_width,
             num_layers = num_layers
-        )
+        ).cuda()
 
         self.model = model
-        self.optimizer = Adam(model.parameters(), lr)
+
         self.scaler = GradScaler()
+        self.optimizer = Adam(model.parameters(), lr)
+        self.gradient_accumulate_every = gradient_accumulate_every
 
         self.text = text
         textpath = self.text.replace(' ','_')
@@ -152,14 +160,15 @@ class Imagine(nn.Module):
         self.save_every = save_every
 
     def train_step(self, epoch, i):
-        self.optimizer.zero_grad()
 
-        with autocast():
-            loss = self.model(self.encoded_text)
+        for _ in range(self.gradient_accumulate_every):
+            with autocast():
+                loss = self.model(self.encoded_text)
+            self.scaler.scale(loss / self.gradient_accumulate_every).backward()
 
-        self.scaler.scale(loss).backward()
         self.scaler.step(self.optimizer)
         self.scaler.update()
+        self.optimizer.zero_grad()
 
         if i % self.save_every == 0:
             with torch.no_grad():
