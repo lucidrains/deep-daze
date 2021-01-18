@@ -8,6 +8,7 @@ from torch.cuda.amp import GradScaler, autocast
 from pathlib import Path
 from tqdm import trange
 import torchvision
+from torchvision.utils import save_image
 
 from deep_daze.clip import load, tokenize, normalize_image
 from siren_pytorch import SirenNet, SirenWrapper
@@ -159,7 +160,8 @@ class Imagine(nn.Module):
         image_width = 512,
         num_layers = 16,
         epochs = 20,
-        iterations = 1050
+        iterations = 1050,
+        save_progress = False
     ):
         super().__init__()
         self.epochs = epochs
@@ -182,7 +184,10 @@ class Imagine(nn.Module):
 
         self.text = text
         textpath = self.text.replace(' ','_')
+
+        self.textpath = textpath
         self.filename = Path(f'./{textpath}.png')
+        self.save_progress = save_progress
 
         self.encoded_text = tokenize(text).cuda()
 
@@ -203,8 +208,12 @@ class Imagine(nn.Module):
         if i % self.save_every == 0:
             with torch.no_grad():
                 al = normalize_image(self.model(self.encoded_text, return_loss = False).cpu())
-                torchvision.utils.save_image(al, str(self.filename))
+                save_image(al, str(self.filename))
                 print(f'image updated at "./{str(self.filename)}"')
+
+                if self.save_progress:
+                    num = i // self.save_every
+                    save_image(al, Path(f'./{self.textpath}.{num}.png'))
 
         return total_loss
 
