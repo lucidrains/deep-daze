@@ -9,7 +9,7 @@ from tqdm import trange
 import torchvision
 
 from deep_daze.clip import load, tokenize, normalize_image
-from siren_pytorch import SirenNet
+from siren_pytorch import SirenNet, SirenWrapper
 
 from collections import namedtuple
 from einops import rearrange
@@ -47,24 +47,8 @@ perceptor, preprocess = load()
 
 # load siren
 
-class SirenWrapper(nn.Module):
-    def __init__(self, net, image_width, image_height):
-        super().__init__()
-        self.net = net
-        self.image_width = image_width
-        self.image_height = image_height
-
-        tensors = [torch.linspace(-1, 1, steps = image_width), torch.linspace(-1, 1, steps = image_height)]
-        mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
-        mgrid = rearrange(mgrid, 'h w c -> (h w) c')
-        self.register_buffer('grid', mgrid)
-
-    def forward(self):
-        coords = self.grid.clone().detach().requires_grad_()
-        out = self.net(coords)
-        out = rearrange(out, '(h w) c -> () c h w', h = self.image_height, w = self.image_width)
-        out = (out.tanh() + 1) * 0.5
-        return out
+def norm_siren_output(img):
+    return (img.tanh() + 1) * 0.5
 
 class DeepDaze(nn.Module):
     def __init__(
@@ -78,14 +62,16 @@ class DeepDaze(nn.Module):
         self.loss_coef = loss_coef
         self.image_width = image_width
 
+        siren = SirenNet(
+            dim_in = 2,
+            dim_hidden = 256,
+            num_layers = num_layers,
+            dim_out = 3,
+            use_bias = True
+        )
+
         self.model = SirenWrapper(
-            SirenNet(
-                dim_in = 2,
-                dim_hidden = 256,
-                num_layers = num_layers,
-                dim_out = 3,
-                use_bias = True
-            ),
+            siren,
             image_width = image_width,
             image_height = image_width
         )
@@ -95,6 +81,7 @@ class DeepDaze(nn.Module):
     def forward(self, text, return_loss = True):
         width = self.image_width
         out = self.model()
+        out = norm_siren_output(out)
 
         if not return_loss:
             return out
