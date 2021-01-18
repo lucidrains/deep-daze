@@ -16,15 +16,6 @@ from einops import rearrange
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
 
-# constants
-
-RegConfig = namedtuple('RegConfig', ['num', 'ratio', 'downsized_image_size'])
-
-DEFAULT_REG_CONFIG = [
-    RegConfig(num = 3, ratio = (0.5, 0.95), downsized_image_size = None),
-    RegConfig(num = 1, ratio = (0.8, 0.95), downsized_image_size = 64),
-]
-
 # helpers
 
 def exists(val):
@@ -55,12 +46,12 @@ class DeepDaze(nn.Module):
         self,
         num_layers = 8,
         image_width = 512,
-        loss_coef = 100,
-        reg_config = DEFAULT_REG_CONFIG
+        loss_coef = 100
     ):
         super().__init__()
         self.loss_coef = loss_coef
         self.image_width = image_width
+        self.sizing_schedule_counter = 0
 
         siren = SirenNet(
             dim_in = 2,
@@ -76,8 +67,6 @@ class DeepDaze(nn.Module):
             image_height = image_width
         )
 
-        self.reg_config = reg_config
-
     def forward(self, text, return_loss = True):
         out = self.model()
         out = norm_siren_output(out)
@@ -87,13 +76,12 @@ class DeepDaze(nn.Module):
 
         pieces = []
 
-        for (num_images, (lo, hi), downsize) in self.reg_config:
-            for _ in range(num_images):
-                cutout = rand_cutout(out, ratio = (lo, hi))
-                if exists(downsize):
-                    cutout = interpolate(cutout, downsize)
-                resized_cutout = interpolate(cutout, 224)
-                pieces.append(normalize_image(resized_cutout))
+        for size in self.sample_sizes():
+            offsetx = torch.randint(0, width - size, ())
+            offsety = torch.randint(0, width - size, ())
+            apper = out[:, :, offsetx:offsetx + size, offsety:offsety + size]
+            apper = torch.nn.functional.interpolate(apper, (224, 224), mode = 'bilinear', align_corners = False)
+            pieces.append(normalize_image(apper))
 
         image = torch.cat(pieces)
 
@@ -104,6 +92,42 @@ class DeepDaze(nn.Module):
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim = -1).mean()
         return loss
 
+    def sample_sizes(self):
+        self.sizing_schedule_counter+=1
+        counter = self.sizing_schedule_counter
+        pieces_per_group = 4
+        # 6 piece schedule increasing in context as model saturates
+        if counter<500:
+            partition = [4,5,3,2,1,1]
+        elif counter<1000:
+            partition = [2,5,4,2,2,1]
+        elif counter<1500:
+            partition = [1,4,5,3,2,1]
+        elif counter<2000:
+            partition = [1,3,4,4,2,2]
+        elif counter<2500:
+            partition = [1,2,2,4,4,3]
+        elif counter<3000:
+            partition = [1,1,2,3,4,5]
+        else:
+            partition = [1,1,1,2,4,7]
+
+        dbase = .38
+        step = .1
+        width = self.image_width
+
+        sizes = []
+        for part_index in range(len(partition)):
+            groups = partition[part_index]
+            for _ in range(groups*pieces_per_group):
+                sizes.append(torch.randint(
+                    int((dbase+step*part_index+.01)*width),
+                    int((dbase+step*(1+part_index))*width), ()))
+        # Sorting is quite helpful in regularizing the training inputs
+        sizes.sort()
+        return sizes
+
+
 class Imagine(nn.Module):
     def __init__(
         self,
@@ -113,15 +137,13 @@ class Imagine(nn.Module):
         gradient_accumulate_every = 4,
         save_every = 100,
         image_width = 512,
-        num_layers = 16,
-        reg_config = DEFAULT_REG_CONFIG
+        num_layers = 16
     ):
         super().__init__()
 
         model = DeepDaze(
             image_width = image_width,
-            num_layers = num_layers,
-            reg_config = reg_config
+            num_layers = num_layers
         ).cuda()
 
         self.model = model
@@ -131,7 +153,8 @@ class Imagine(nn.Module):
         self.gradient_accumulate_every = gradient_accumulate_every
 
         self.text = text
-        self.filename = Path(f'./{self.text}.png')
+        textpath = self.text.replace(' ','_')
+        self.filename = Path(f'./{textpath}.png')
 
         self.encoded_text = tokenize(text).cuda()
         self.save_every = save_every
@@ -157,5 +180,5 @@ class Imagine(nn.Module):
         print(f'Imagining "{self.text}" from the depths of my weights...')
 
         for epoch in trange(20, desc = 'epochs'):
-            for i in trange(1000, desc = 'iteration'):
+            for i in trange(1050, desc='iteration'):
                 self.train_step(epoch, i)
