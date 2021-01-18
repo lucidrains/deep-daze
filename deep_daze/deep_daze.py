@@ -79,18 +79,15 @@ class DeepDaze(nn.Module):
         self.reg_config = reg_config
 
     def forward(self, text, return_loss = True):
-        width = self.image_width
         out = self.model()
         out = norm_siren_output(out)
 
         if not return_loss:
             return out
 
-        cutout_specs = self.reg_config
-
         pieces = []
 
-        for (num_images, (lo, hi), downsize) in cutout_specs:
+        for (num_images, (lo, hi), downsize) in self.reg_config:
             for _ in range(num_images):
                 cutout = rand_cutout(out, ratio = (lo, hi))
                 if exists(downsize):
@@ -101,8 +98,8 @@ class DeepDaze(nn.Module):
         image = torch.cat(pieces)
 
         with autocast(enabled = False):
-          image_embed = perceptor.encode_image(image)
-          text_embed = perceptor.encode_text(text)
+            image_embed = perceptor.encode_image(image)
+            text_embed = perceptor.encode_text(text)
 
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim = -1).mean()
         return loss

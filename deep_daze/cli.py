@@ -9,7 +9,8 @@ def train(
     gradient_accumulate_every = 4,
     save_every = 100,
     image_width = 512,
-    deeper = False
+    deeper = False,
+    overwrite = False
 ):
     if deeper:
         num_layers = 32
@@ -22,7 +23,7 @@ def train(
         save_every = save_every
     )
 
-    if imagine.filename.exists():
+    if not overwrite and imagine.filename.exists():
         answer = input('Imagined image already exists, do you want to overwrite? (y/n) ').lower()
         if answer not in ('yes', 'y'):
             exit()
