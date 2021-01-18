@@ -22,7 +22,7 @@ RegConfig = namedtuple('RegConfig', ['num', 'ratio', 'downsized_image_size'])
 
 DEFAULT_REG_CONFIG = [
     RegConfig(num = 3, ratio = (0.5, 0.95), downsized_image_size = None),
-    RegConfig(num = 1, ratio = (0.5, 0.95), downsized_image_size = 64),
+    RegConfig(num = 1, ratio = (0.8, 0.95), downsized_image_size = 64),
 ]
 
 # helpers
