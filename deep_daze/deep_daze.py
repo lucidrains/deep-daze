@@ -25,9 +25,8 @@ def exists(val):
 def interpolate(image, size):
     return F.interpolate(image, (size, size), mode = 'bilinear', align_corners = False)
 
-def rand_cutout(image, ratio = (0.5, 0.95)):
-    lo, hi, width = *ratio, image.shape[-1]
-    size = torch.randint(int(lo * width), int(hi * width), ())
+def rand_cutout(image, size):
+    width = image.shape[-1]
     offsetx = torch.randint(0, width - size, ())
     offsety = torch.randint(0, width - size, ())
     cutout = image[:, :, offsetx:offsetx + size, offsety:offsety + size]
@@ -82,10 +81,8 @@ class DeepDaze(nn.Module):
         width = out.shape[-1]
 
         for size in sample(self.sample_sizes(), self.batch_size):
-            offsetx = torch.randint(0, width - size, ())
-            offsety = torch.randint(0, width - size, ())
-            apper = out[:, :, offsetx:offsetx + size, offsety:offsety + size]
-            apper = torch.nn.functional.interpolate(apper, (224, 224), mode = 'bilinear', align_corners = False)
+            apper = rand_cutout(out, size)
+            apper = interpolate(apper, 224)
             pieces.append(normalize_image(apper))
 
         image = torch.cat(pieces)
@@ -101,6 +98,7 @@ class DeepDaze(nn.Module):
         self.sizing_schedule_counter+=1
         counter = self.sizing_schedule_counter
         pieces_per_group = 4
+
         # 6 piece schedule increasing in context as model saturates
         if counter<500:
             partition = [4,5,3,2,1,1]
