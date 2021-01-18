@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from random import sample
 from torch import nn
 from torch.optim import Adam
 from torch.cuda.amp import GradScaler, autocast
@@ -46,11 +47,14 @@ class DeepDaze(nn.Module):
         self,
         num_layers = 8,
         image_width = 512,
-        loss_coef = 100
+        loss_coef = 100,
+        batch_size = 4
     ):
         super().__init__()
         self.loss_coef = loss_coef
         self.image_width = image_width
+
+        self.batch_size = batch_size
         self.sizing_schedule_counter = 0
 
         siren = SirenNet(
@@ -75,8 +79,9 @@ class DeepDaze(nn.Module):
             return out
 
         pieces = []
+        width = out.shape[-1]
 
-        for size in self.sample_sizes():
+        for size in sample(self.sample_sizes(), self.batch_size):
             offsetx = torch.randint(0, width - size, ())
             offsety = torch.randint(0, width - size, ())
             apper = out[:, :, offsetx:offsetx + size, offsety:offsety + size]
@@ -123,7 +128,7 @@ class DeepDaze(nn.Module):
                 sizes.append(torch.randint(
                     int((dbase+step*part_index+.01)*width),
                     int((dbase+step*(1+part_index))*width), ()))
-        # Sorting is quite helpful in regularizing the training inputs
+
         sizes.sort()
         return sizes
 
@@ -134,6 +139,7 @@ class Imagine(nn.Module):
         text,
         *,
         lr = 1e-5,
+        batch_size = 4,
         gradient_accumulate_every = 4,
         save_every = 100,
         image_width = 512,
@@ -142,6 +148,7 @@ class Imagine(nn.Module):
         super().__init__()
 
         model = DeepDaze(
+            batch_size = batch_size,
             image_width = image_width,
             num_layers = num_layers
         ).cuda()
@@ -153,6 +160,7 @@ class Imagine(nn.Module):
         self.gradient_accumulate_every = gradient_accumulate_every
 
         self.text = text
+
         textpath = self.text.replace(' ','_')
         self.filename = Path(f'./{textpath}.png')
 
