@@ -160,13 +160,19 @@ def _download(url, root = os.path.expanduser("~/.cache/clip")):
 
     return download_target
 
+# From https://github.com/pytorch/vision/issues/528#issuecomment-395133655
+def denormalize():
+    mean = torch.tensor([0.48145466, 0.4578275, 0.40821073], dtype=torch.float32)
+    std = torch.tensor([0.26862954, 0.26130258, 0.27577711], dtype=torch.float32)
+    return Normalize((-mean / std).tolist(), (1.0 / std).tolist())
+    
 def load():
     device = 'cuda'
     model_path = _download(MODEL_PATH)
     model = torch.jit.load(model_path, map_location = device).eval()
     n_px = model.input_resolution.item()
 
-    normalize_image = Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+    normalize_image = denormalize()
 
     # patch the device names
     device_holder = torch.jit.trace(lambda: torch.ones([]).to(torch.device(device)), example_inputs=[])
