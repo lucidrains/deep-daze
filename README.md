@@ -85,6 +85,10 @@ This is just a teaser. We will be able to generate images, sound, anything at wi
 
 Please join replication efforts for DALL-E for <a href="https://github.com/lucidrains/dalle-pytorch">Pytorch</a> or <a href="https://github.com/EleutherAI/DALLE-mtf">Mesh Tensorflow</a> if you are interested in furthering this technology.
 
+## Alternatives
+
+<a href="https://github.com/lucidrains/big-sleep">Big Sleep</a> - CLIP and the generator from Big GAN
+
 ## Citations
 
 ```bibtex
