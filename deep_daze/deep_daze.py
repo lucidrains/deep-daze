@@ -204,6 +204,11 @@ class Imagine(nn.Module):
         open_folder = True
     ):
         super().__init__()
+
+        if exists(seed):
+            print(f'setting seed: {seed}')
+            torch.manual_seed(seed)
+
         self.epochs = epochs
         self.iterations = iterations
         total_batches = epochs * iterations * batch_size * gradient_accumulate_every
@@ -232,9 +237,6 @@ class Imagine(nn.Module):
         self.encoded_text = tokenize(text).cuda()
 
         self.open_folder = open_folder
-        if exists(seed):
-            print(f'setting seed: {seed}')
-            torch.manual_seed(seed)
 
     def train_step(self, epoch, i):
         total_loss = 0
