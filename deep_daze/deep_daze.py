@@ -51,7 +51,7 @@ perceptor, preprocess = load()
 # load siren
 
 def norm_siren_output(img):
-    return (img.tanh() + 1) * 0.5
+    return (img + 1) * 0.5
 
 class DeepDaze(nn.Module):
     def __init__(
