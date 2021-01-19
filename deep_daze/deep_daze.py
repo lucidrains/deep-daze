@@ -13,10 +13,21 @@ from torchvision.utils import save_image
 from deep_daze.clip import load, tokenize, normalize_image
 from siren_pytorch import SirenNet, SirenWrapper
 
+import signal
 from collections import namedtuple
 from einops import rearrange
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
+
+# graceful keyboard interrupt
+
+terminate = False                            
+
+def signal_handling(signum,frame):           
+    global terminate                         
+    terminate = True                         
+
+signal.signal(signal.SIGINT,signal_handling) 
 
 # helpers
 
@@ -225,3 +236,7 @@ class Imagine(nn.Module):
             for i in pbar:
                 loss = self.train_step(epoch, i)
                 pbar.set_description(f'loss: {loss.item():.2f}')
+
+                if terminate:
+                    print('interrupted by keyboard, gracefully exiting')
+                    return
