@@ -10,7 +10,7 @@ from tqdm import trange
 import torchvision
 from torchvision.utils import save_image
 
-from deep_daze.clip import load, tokenize, normalize_image
+from deep_daze.clip import load, tokenize
 from siren_pytorch import SirenNet, SirenWrapper
 
 import signal
@@ -46,7 +46,7 @@ def rand_cutout(image, size):
 
 # load clip
 
-perceptor, preprocess = load()
+perceptor, normalize_image = load()
 
 # load siren
 

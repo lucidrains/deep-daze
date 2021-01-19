@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+from torchvision.transforms import Normalize
 
 import hashlib
 import os
@@ -160,20 +160,13 @@ def _download(url, root = os.path.expanduser("~/.cache/clip")):
 
     return download_target
 
-normalize_image = Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-
-def load(device = ("cuda" if torch.cuda.is_available() else "cpu")):
+def load():
+    device = 'cuda'
     model_path = _download(MODEL_PATH)
     model = torch.jit.load(model_path, map_location = device).eval()
     n_px = model.input_resolution.item()
 
-    transform = Compose([
-        Resize(n_px, interpolation=Image.BICUBIC),
-        CenterCrop(n_px),
-        lambda image: image.convert("RGB"),
-        ToTensor(),
-        normalize_image,
-    ])
+    normalize_image = Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
 
     # patch the device names
     device_holder = torch.jit.trace(lambda: torch.ones([]).to(torch.device(device)), example_inputs=[])
@@ -192,32 +185,7 @@ def load(device = ("cuda" if torch.cuda.is_available() else "cpu")):
     model.apply(patch_device)
     patch_device(model.encode_image)
     patch_device(model.encode_text)
-
-    # patch dtype to float32 on CPU
-    if device == "cpu":
-        float_holder = torch.jit.trace(lambda: torch.ones([]).float(), example_inputs=[])
-        float_input = list(float_holder.graph.findNode("aten::to").inputs())[1]
-        float_node = float_input.node()
-
-        def patch_float(module):
-            graphs = [module.graph] if hasattr(module, "graph") else []
-            if hasattr(module, "forward1"):
-                graphs.append(module.forward1.graph)
-
-            for graph in graphs:
-                for node in graph.findAllNodes("aten::to"):
-                    inputs = list(node.inputs())
-                    for i in [1, 2]:  # dtype can be the second or third argument to aten::to()
-                        if inputs[i].node()["value"] == 5:
-                            inputs[i].node().copyAttributes(float_node)
-
-        model.apply(patch_float)
-        patch_float(model.encode_image)
-        patch_float(model.encode_text)
-
-        model.float()
-
-    return model, transform
+    return model, normalize_image
 
 tokenizer = SimpleTokenizer()
 
