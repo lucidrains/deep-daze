@@ -32,7 +32,8 @@ setup(
     'fire',
     'ftfy',
     'siren-pytorch>=0.0.7',
-    'tqdm'
+    'tqdm',
+    'regex'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
