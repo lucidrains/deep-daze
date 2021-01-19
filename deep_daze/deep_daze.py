@@ -172,7 +172,8 @@ class Imagine(nn.Module):
         num_layers = 16,
         epochs = 20,
         iterations = 1050,
-        save_progress = False
+        save_progress = False,
+        seed = None
     ):
         super().__init__()
         self.epochs = epochs
@@ -202,6 +203,10 @@ class Imagine(nn.Module):
 
         self.encoded_text = tokenize(text).cuda()
 
+        if exists(seed):
+            print(f'setting seed: {seed}')
+            torch.manual_seed(seed)
+
     def train_step(self, epoch, i):
         total_loss = 0
 
@@ -218,13 +223,14 @@ class Imagine(nn.Module):
 
         if i % self.save_every == 0:
             with torch.no_grad():
-                al = normalize_image(self.model(self.encoded_text, return_loss = False).cpu())
-                save_image(al, str(self.filename))
+                img = normalize_image(self.model(self.encoded_text, return_loss = False).cpu())
+                img.clamp_(0., 1.)
+                save_image(img, str(self.filename))
                 print(f'image updated at "./{str(self.filename)}"')
 
                 if self.save_progress:
                     num = i // self.save_every
-                    save_image(al, Path(f'./{self.textpath}.{num}.png'))
+                    save_image(img, Path(f'./{self.textpath}.{num}.png'))
 
         return total_loss
 

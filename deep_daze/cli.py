@@ -1,3 +1,4 @@
+import sys
 import fire
 from deep_daze import Imagine
 from pathlib import Path
@@ -14,7 +15,8 @@ def train(
     image_width = 512,
     deeper = False,
     overwrite = False,
-    save_progress = False
+    save_progress = False,
+    seed = None
 ):
     if deeper:
         num_layers = 32
@@ -28,13 +30,14 @@ def train(
         epochs = epochs,
         iterations = iterations,
         save_every = save_every,
-        save_progress = save_progress
+        save_progress = save_progress,
+        seed = seed
     )
 
     if not overwrite and imagine.filename.exists():
         answer = input('Imagined image already exists, do you want to overwrite? (y/n) ').lower()
         if answer not in ('yes', 'y'):
-            exit()
+            sys.exit()
 
     imagine()
 
