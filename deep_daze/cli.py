@@ -16,7 +16,8 @@ def train(
     deeper = False,
     overwrite = False,
     save_progress = False,
-    seed = None
+    seed = None,
+    open_folder = True
 ):
     if deeper:
         num_layers = 32
@@ -31,7 +32,8 @@ def train(
         iterations = iterations,
         save_every = save_every,
         save_progress = save_progress,
-        seed = seed
+        seed = seed,
+        open_folder = open_folder
     )
 
     if not overwrite and imagine.filename.exists():

@@ -1,20 +1,23 @@
 import torch
 import torch.nn.functional as F
-from random import sample
 from torch import nn
 from torch.optim import Adam
 from torch.cuda.amp import GradScaler, autocast
 
-from pathlib import Path
-from tqdm import trange
 import torchvision
 from torchvision.utils import save_image
+
+import os
+import sys
+import signal
+import subprocess
+from collections import namedtuple
+from pathlib import Path
+from tqdm import trange
 
 from deep_daze.clip import load, tokenize
 from siren_pytorch import SirenNet, SirenWrapper
 
-import signal
-from collections import namedtuple
 from einops import rearrange
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
@@ -43,6 +46,30 @@ def rand_cutout(image, size):
     offsety = torch.randint(0, width - size, ())
     cutout = image[:, :, offsetx:offsetx + size, offsety:offsety + size]
     return cutout
+
+def open_folder(path):
+    if os.path.isfile(path):
+        path = os.path.dirname(path)
+
+    if not os.path.isdir(path):
+        return
+
+    cmd_list = None
+    if sys.platform == 'darwin':
+        cmd_list = ['open', '--', path]
+    elif sys.platform == 'linux2' or sys.platform == 'linux':
+        cmd_list = ['xdg-open', path]
+    elif sys.platform in ['win32', 'win64']:
+        cmd_list = ['explorer', path.replace('/','\\')]
+    if cmd_list == None:
+        return
+
+    try:
+        subprocess.check_call(cmd_list)
+    except subprocess.CalledProcessError:
+        pass
+    except OSError:
+        pass
 
 # load clip
 
@@ -173,7 +200,8 @@ class Imagine(nn.Module):
         epochs = 20,
         iterations = 1050,
         save_progress = False,
-        seed = None
+        seed = None,
+        open_folder = True
     ):
         super().__init__()
         self.epochs = epochs
@@ -203,6 +231,7 @@ class Imagine(nn.Module):
 
         self.encoded_text = tokenize(text).cuda()
 
+        self.open_folder = open_folder
         if exists(seed):
             print(f'setting seed: {seed}')
             torch.manual_seed(seed)
@@ -236,6 +265,9 @@ class Imagine(nn.Module):
 
     def forward(self):
         print(f'Imagining "{self.text}" from the depths of my weights...')
+
+        if self.open_folder:
+            open_folder('./')
 
         for epoch in trange(self.epochs, desc = 'epochs'):
             pbar = trange(self.iterations, desc='iteration')
