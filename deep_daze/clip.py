@@ -61,7 +61,7 @@ class SimpleTokenizer(object):
     def __init__(self, bpe_path: str = default_bpe()):
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
-        merges = Path(bpe_path).read_text().split('\n')
+        merges = Path(bpe_path).read_text(encoding='utf8').split('\n')
         merges = merges[1:49152-256-2+1]
         merges = [tuple(merge.split()) for merge in merges]
         vocab = list(bytes_to_unicode().values())
