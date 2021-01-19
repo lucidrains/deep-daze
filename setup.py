@@ -27,11 +27,12 @@ setup(
     'text to image'
   ],
   install_requires=[
-    'torch>=1.7.1',
     'einops>=0.3',
     'fire',
     'ftfy',
     'siren-pytorch>=0.0.7',
+    'torch>=1.7.1',
+    'torchvision>=0.8.2',
     'tqdm',
     'regex'
   ],
