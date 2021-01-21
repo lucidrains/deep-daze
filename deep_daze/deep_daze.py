@@ -257,7 +257,7 @@ class Imagine(nn.Module):
                 # https://github.com/lucidrains/deep-daze/issues/9#issuecomment-764007289
                 img = self.model(self.encoded_text, return_loss = False).cpu()
                 img_max = torch.amax(img)
-                img_min = torch.amin()
+                img_min = torch.amin(img)
                 img = torch.divide(torch.subtract(img, img_min),img_max-img_min)
                 img.clamp_(0., 1.)
                 save_image(img, str(self.filename))
