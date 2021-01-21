@@ -254,7 +254,11 @@ class Imagine(nn.Module):
 
         if i % self.save_every == 0:
             with torch.no_grad():
-                img = normalize_image(self.model(self.encoded_text, return_loss = False).cpu())
+                # https://github.com/lucidrains/deep-daze/issues/9#issuecomment-764007289
+                img = self.model(self.encoded_text, return_loss = False).cpu()
+                img_max = torch.amax(img)
+                img_min = torch.amin()
+                img = torch.divide(torch.subtract(img, img_min),img_max-img_min)
                 img.clamp_(0., 1.)
                 save_image(img, str(self.filename))
                 print(f'image updated at "./{str(self.filename)}"')
