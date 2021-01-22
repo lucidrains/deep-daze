@@ -208,6 +208,9 @@ class Imagine(nn.Module):
         if exists(seed):
             print(f'setting seed: {seed}')
             torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            random.seed(seed)
+            torch.backends.cudnn.deterministic=True
 
         self.epochs = epochs
         self.iterations = iterations
@@ -270,6 +273,7 @@ class Imagine(nn.Module):
 
         if self.open_folder:
             open_folder('./')
+            self.open_folder = False
 
         for epoch in trange(self.epochs, desc = 'epochs'):
             pbar = trange(self.iterations, desc='iteration')

@@ -19,6 +19,8 @@ def train(
     seed = None,
     open_folder = True
 ):
+    print('Starting up...')
+
     if deeper:
         num_layers = 32
 
