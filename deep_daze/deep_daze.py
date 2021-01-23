@@ -265,7 +265,7 @@ class Imagine(nn.Module):
                 if self.save_progress:
                     current_total_iterations = epoch * self.iterations + i
                     num = current_total_iterations // self.save_every
-                    Path("./output").mkdir(parents=True, exist_ok=True)
+                    Path("./output").mkdir(exist_ok=True)
                     save_path = f"./output/{self.textpath}.{num}.png"
                     save_image(img, Path(save_path))
 
