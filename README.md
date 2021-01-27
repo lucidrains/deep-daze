@@ -44,7 +44,7 @@ This will require that you have an Nvidia GPU
 $ pip install deep-daze
 ```
 
-## Usage
+## Examples
 
 ```bash
 $ imagine "a house in the forest"
@@ -58,12 +58,68 @@ If you have enough memory, you can get better quality by adding a `--deeper` fla
 $ imagine "shattered plates on the ground" --deeper
 ```
 
-## Advanced
+### Advanced
 
 In true deep learning fashion, more layers will yield better results. Default is at `16`, but can be increased to `32` depending on your resources.
 
 ```bash
 $ imagine "stranger in strange lands" --num-layers 32
+```
+
+## Usage
+```bash
+NAME
+    imagine
+
+SYNOPSIS
+    imagine TEXT <flags>
+
+POSITIONAL ARGUMENTS
+    TEXT
+        (required) A phrase less than 77 characters which you would like to visualize.
+
+FLAGS
+    --learning_rate=LEARNING_RATE
+        Default: 1e-05
+        The learning rate of the neural net.
+    --num_layers=NUM_LAYERS
+        Default: 16
+        The number of hidden layers to use in the Siren neural net.
+    --batch_size=BATCH_SIZE
+        Default: 4
+        The number of generated images to pass into Siren before calculating loss. Decreasing this can lower memory and accuracy.
+    --gradient_accumulate_every=GRADIENT_ACCUMULATE_EVERY
+        Default: 4
+        Calculate a weighted loss of n samples for each iteration. Increasing this can help increase accuracy with lower batch sizes.
+    --epochs=EPOCHS
+        Default: 20
+        The number of epochs to run.
+    --iterations=ITERATIONS
+        Default: 1050
+        The number of times to calculate and backpropagate loss in a given epoch.
+    --save_every=SAVE_EVERY
+        Default: 100
+        Generate an image every time iterations is a multiple of this number.
+    --image_width=IMAGE_WIDTH
+        Default: 512
+        The desired resolution of the image.
+    --deeper=DEEPER
+        Default: False
+        Uses a Siren neural net with 32 hidden layers.
+    --overwrite=OVERWRITE
+        Default: False
+        Whether or not to overwrite existing generated images of the same name.
+    --save_progress=SAVE_PROGRESS
+        Default: False
+        Whether or not to save images generated before training Siren is complete.
+    --seed=SEED
+        Type: Optional[]
+        Default: None
+        A seed to be used for deterministic runs.
+    --open_folder=OPEN_FOLDER
+        Default: True
+        Whether or not to open a folder showing your generated images.
+
 ```
 
 If you would like to invoke it in code.
