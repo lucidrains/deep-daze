@@ -51,6 +51,7 @@ def train(
         gradient_accumulate_every=gradient_accumulate_every,
         epochs=epochs,
         iterations=iterations,
+        image_width=image_width,
         save_every=save_every,
         save_progress=save_progress,
         seed=seed,
