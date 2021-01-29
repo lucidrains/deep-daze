@@ -19,7 +19,8 @@ def train(
         overwrite=False,
         save_progress=False,
         seed=None,
-        open_folder=True
+        open_folder=True,
+        save_date_time=False
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -36,12 +37,14 @@ def train(
     :param deeper: Uses a Siren neural net with 32 hidden layers.
     :param image_width: The desired resolution of the image.
     :param seed: A seed to be used for deterministic runs.
-
+    :param save_date_time: Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here.png`
     """
-    print('Starting up...')
+    # Don't instantiate imagine if the user just wants help.
+    if any("--help" in arg for arg in sys.argv):
+        print("Type `imagine --help` for usage info.")
+        sys.exit()
 
-    if deeper:
-        num_layers = 32
+    num_layers = 32 if deeper else num_layers
 
     imagine = Imagine(
         text,
@@ -55,9 +58,11 @@ def train(
         save_every=save_every,
         save_progress=save_progress,
         seed=seed,
-        open_folder=open_folder
+        open_folder=open_folder,
+        save_date_time=save_date_time
     )
 
+    print('Starting up...')
     if not overwrite and imagine.filename.exists():
         answer = input('Imagined image already exists, do you want to overwrite? (y/n) ').lower()
         if answer not in ('yes', 'y'):

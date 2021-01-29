@@ -3,7 +3,9 @@ import signal
 import subprocess
 import sys
 import random
+from datetime import datetime
 from pathlib import Path
+from shutil import copy
 
 import torch
 import torch.nn.functional as F
@@ -12,7 +14,7 @@ from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.optim import Adam
 from torchvision.utils import save_image
-from tqdm import trange
+from tqdm import trange, tqdm
 
 from deep_daze.clip import load, tokenize
 
@@ -30,8 +32,10 @@ def signal_handling(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handling)
 
+perceptor, normalize_image = load()
 
-# helpers
+
+# Helpers
 
 def exists(val):
     return val is not None
@@ -74,13 +78,6 @@ def open_folder(path):
         pass
 
 
-# load clip
-
-perceptor, normalize_image = load()
-
-
-# load siren
-
 def norm_siren_output(img):
     return ((img + 1) * 0.5).clamp(0, 1)
 
@@ -95,6 +92,8 @@ class DeepDaze(nn.Module):
             loss_coef=100,
     ):
         super().__init__()
+        # load clip
+
         self.loss_coef = loss_coef
         self.image_width = image_width
 
@@ -206,12 +205,14 @@ class Imagine(nn.Module):
             iterations=1050,
             save_progress=False,
             seed=None,
-            open_folder=True
+            open_folder=True,
+            save_date_time=False
     ):
+
         super().__init__()
 
         if exists(seed):
-            print(f'setting seed: {seed}')
+            tqdm.write(f'setting seed: {seed}')
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
             random.seed(seed)
@@ -229,24 +230,60 @@ class Imagine(nn.Module):
         ).cuda()
 
         self.model = model
-
         self.scaler = GradScaler()
         self.optimizer = Adam(model.parameters(), lr)
         self.gradient_accumulate_every = gradient_accumulate_every
         self.save_every = save_every
-
-        self.text = text
-        textpath = self.text.replace(' ', '_')
-
-        self.textpath = textpath
-        self.filename = Path(f'./{textpath}.png')
+        self.save_date_time = save_date_time
+        self.open_folder = open_folder
         self.save_progress = save_progress
-
+        self.text = text
+        self.textpath = text.replace(" ", "_")
+        self.filename = self.image_output_path()
         self.encoded_text = tokenize(text).cuda()
 
-        self.open_folder = open_folder
+    def image_output_path(self, current_iteration: int = None) -> Path:
+        """
+        Returns underscore separated Path.
+        A current timestamp is prepended if `self.save_date_time` is set.
+        Sequence number left padded with 6 zeroes is appended if `save_every` is set.
+        :rtype: Path
+        """
+        output_path = self.textpath
+        if current_iteration:
+            sequence_number = int(current_iteration / self.save_every)
+            sequence_number_left_padded = str(sequence_number).zfill(6)
+            output_path = f"{output_path}.{sequence_number_left_padded}"
+        if self.save_date_time:
+            current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f")
+            output_path = f"{current_time}_{output_path}"
+        return Path(f"{output_path}.png")
 
-    def train_step(self, epoch, i):
+    def replace_current_img(self):
+        """
+        Replace the current file at {text_path}.png with the current self.filename
+        """
+        always_current_img = f"{self.textpath}.png"
+        if os.path.isfile(always_current_img) or os.path.islink(always_current_img):
+            os.remove(always_current_img)  # remove the file
+
+        copy(str(self.filename), always_current_img)
+
+    def generate_and_save_image(self, custom_filename: Path = None, current_iteration: int = None):
+        """
+        :param current_iteration:
+        :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
+        """
+        with torch.no_grad():
+            img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
+            img.clamp_(0., 1.)
+            self.filename = custom_filename if custom_filename else self.image_output_path(current_iteration=current_iteration)
+            save_image(img, self.filename)
+            self.replace_current_image()
+            tqdm.write(f'image updated at "./{str(self.filename)}"')
+
+
+    def train_step(self, epoch, iteration) -> int:
         total_loss = 0
 
         for _ in range(self.gradient_accumulate_every):
@@ -260,22 +297,13 @@ class Imagine(nn.Module):
         self.scaler.update()
         self.optimizer.zero_grad()
 
-        if i % self.save_every == 0:
-            with torch.no_grad():
-                img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
-                img.clamp_(0., 1.)
-                save_image(img, str(self.filename))
-                print(f'image updated at "./{str(self.filename)}"')
-
-                if self.save_progress:
-                    current_total_iterations = epoch * self.iterations + i
-                    num = current_total_iterations // self.save_every
-                    save_image(img, Path(f'./{self.textpath}.{num}.png'))
+        if (iteration % self.save_every == 0) and self.save_progress:
+            self.generate_and_save_image(current_iteration=iteration)
 
         return total_loss
 
     def forward(self):
-        print(f'Imagining "{self.text}" from the depths of my weights...')
+        tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
 
         if self.open_folder:
             open_folder('./')
