@@ -5,7 +5,7 @@ import sys
 import random
 from datetime import datetime
 from pathlib import Path
-from shutil import copyfile
+from shutil import copy2
 
 import torch
 import torch.nn.functional as F
@@ -269,7 +269,7 @@ class Imagine(nn.Module):
             img.clamp_(0., 1.)
             self.filename = custom_filename if custom_filename else self.image_output_path(current_iteration=current_iteration)
             save_image(img, self.filename)
-            copyfile(str(self.filename), f"{self.textpath}.png")
+            copy2(str(self.filename), f"{self.textpath}.png")
             tqdm.write(f'image updated at "./{str(self.filename)}"')
 
     def train_step(self, epoch, iteration):
