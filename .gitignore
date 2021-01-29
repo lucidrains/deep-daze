@@ -134,3 +134,4 @@ dmypy.json
 
 output/
 run.py
+run.sh
