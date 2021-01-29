@@ -267,7 +267,7 @@ class Imagine(nn.Module):
         if os.path.isfile(always_current_img) or os.path.islink(always_current_img):
             os.remove(always_current_img)  # remove the file
 
-        copy(str(self.filename), always_current_img)
+        #copy(str(self.filename), str(self.filename))
 
     def generate_and_save_image(self, custom_filename: Path = None, current_iteration: int = None):
         """
@@ -279,7 +279,7 @@ class Imagine(nn.Module):
             img.clamp_(0., 1.)
             self.filename = custom_filename if custom_filename else self.image_output_path(current_iteration=current_iteration)
             save_image(img, self.filename)
-            self.replace_current_image()
+            self.replace_current_img()
             tqdm.write(f'image updated at "./{str(self.filename)}"')
 
 
