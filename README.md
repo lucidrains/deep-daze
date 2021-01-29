@@ -119,7 +119,9 @@ FLAGS
     --open_folder=OPEN_FOLDER
         Default: True
         Whether or not to open a folder showing your generated images.
-
+    --save_date_time=SAVE_DATE_TIME
+        Default: False
+        Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here`
 ```
 
 If you would like to invoke it in code.

@@ -13,7 +13,7 @@ from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.optim import Adam
 from torchvision.utils import save_image
-from tqdm import trange
+from tqdm import trange, tqdm
 
 from deep_daze.clip import load, tokenize
 
@@ -213,7 +213,7 @@ class Imagine(nn.Module):
         super().__init__()
 
         if exists(seed):
-            print(f'setting seed: {seed}')
+            tqdm.write(f'setting seed: {seed}')
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
             random.seed(seed)
@@ -237,19 +237,40 @@ class Imagine(nn.Module):
         self.save_every = save_every
         self.save_date_time = save_date_time
         self.open_folder = open_folder
-
-        self.set_text(text)
-
-    def set_text(self, text):
+        self.save_progress = save_progress
         self.text = text
-        textpath = self.text.replace(' ', '_')
-        if self.save_date_time:
-            textpath = datetime.now().strftime("%y%m%d-%H%M%S-") + textpath
-        self.textpath = textpath
-        self.filename = Path(f'./{textpath}.png')
+        self.textpath = text.replace(" ", "_")
+        self.filename = self.image_output_path()
         self.encoded_text = tokenize(text).cuda()
 
-    def train_step(self, epoch, i):
+    def image_output_path(self, current_iteration: int = None) -> Path:
+        """
+        Returns underscore separated Path.
+        A current timestamp is prepended if `self.save_date_time` is set
+        Current i
+        :rtype: Path
+        """
+        output_path = self.textpath
+        if current_iteration:
+            current_iter_left_pad_five_zeroes = str(current_iteration).zfill(5)
+            output_path = f"{output_path}.{current_iter_left_pad_five_zeroes}"
+        if self.save_date_time:
+            ts_prepend = datetime.now().strftime("%y%m%d-%H%M%S_%f_")
+            output_path = f"./{ts_prepend}"
+        return Path(f"{output_path}.png")
+
+    def generate_and_save_image(self, custom_filename: Path = None):
+        """
+        :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
+        """
+        with torch.no_grad():
+            img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
+            img.clamp_(0., 1.)
+            self.filename = custom_filename if custom_filename else self.image_output_path()
+            save_image(img, self.filename)
+            tqdm.write(f'image updated at "./{str(self.filename)}"')
+
+    def train_step(self, epoch, iteration):
         total_loss = 0
 
         for _ in range(self.gradient_accumulate_every):
@@ -263,22 +284,13 @@ class Imagine(nn.Module):
         self.scaler.update()
         self.optimizer.zero_grad()
 
-        if i % self.save_every == 0:
-            with torch.no_grad():
-                img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
-                img.clamp_(0., 1.)
-                save_image(img, str(self.filename))
-                print(f'image updated at "./{str(self.filename)}"')
-
-                if self.save_progress:
-                    current_total_iterations = epoch * self.iterations + i
-                    num = current_total_iterations // self.save_every
-                    save_image(img, Path(f'./{self.textpath}.{num}.png'))
+        if (iteration % self.save_every == 0) and self.save_progress:
+            self.generate_and_save_image()
 
         return total_loss
 
     def forward(self):
-        print(f'Imagining "{self.text}" from the depths of my weights...')
+        tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
 
         if self.open_folder:
             open_folder('./')
