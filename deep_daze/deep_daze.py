@@ -259,6 +259,16 @@ class Imagine(nn.Module):
             output_path = f"{current_time}_{output_path}"
         return Path(f"{output_path}.png")
 
+    def replace_current_img(self):
+        """
+        Replace the current file at {text_path}.png with the current self.filename
+        """
+        always_current_img = f"{self.textpath}.png"
+        if os.path.isfile(always_current_img) or os.path.islink(always_current_img):
+            os.remove(always_current_img)  # remove the file
+
+        copy(str(self.filename), always_current_img)
+
     def generate_and_save_image(self, custom_filename: Path = None, current_iteration: int = None):
         """
         :param current_iteration:
@@ -269,10 +279,11 @@ class Imagine(nn.Module):
             img.clamp_(0., 1.)
             self.filename = custom_filename if custom_filename else self.image_output_path(current_iteration=current_iteration)
             save_image(img, self.filename)
-            copy(str(self.filename), f"{self.textpath}.png")
+            self.replace_current_image()
             tqdm.write(f'image updated at "./{str(self.filename)}"')
 
-    def train_step(self, epoch, iteration):
+
+    def train_step(self, epoch, iteration) -> int:
         total_loss = 0
 
         for _ in range(self.gradient_accumulate_every):
