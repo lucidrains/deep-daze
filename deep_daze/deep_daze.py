@@ -5,6 +5,7 @@ import sys
 import random
 from datetime import datetime
 from pathlib import Path
+from shutil import copyfile
 
 import torch
 import torch.nn.functional as F
@@ -32,7 +33,7 @@ def signal_handling(signum, frame):
 signal.signal(signal.SIGINT, signal_handling)
 
 
-# helpers
+# Helpers
 
 def exists(val):
     return val is not None
@@ -75,13 +76,6 @@ def open_folder(path):
         pass
 
 
-# load clip
-
-perceptor, normalize_image = load()
-
-
-# load siren
-
 def norm_siren_output(img):
     return ((img + 1) * 0.5).clamp(0, 1)
 
@@ -96,6 +90,9 @@ class DeepDaze(nn.Module):
             loss_coef=100,
     ):
         super().__init__()
+        # load clip
+
+        self.perceptor, self.normalize_image = load()
         self.loss_coef = loss_coef
         self.image_width = image_width
 
@@ -133,13 +130,13 @@ class DeepDaze(nn.Module):
         for size in self.scheduled_sizes[size_slice]:
             apper = rand_cutout(out, size)
             apper = interpolate(apper, 224)
-            pieces.append(normalize_image(apper))
+            pieces.append(self.normalize_image(apper))
 
         image = torch.cat(pieces)
 
         with autocast(enabled=False):
-            image_embed = perceptor.encode_image(image)
-            text_embed = perceptor.encode_text(text)
+            image_embed = self.perceptor.encode_image(image)
+            text_embed = self.perceptor.encode_text(text)
 
         self.num_batches_processed += self.batch_size
 
@@ -210,6 +207,10 @@ class Imagine(nn.Module):
             open_folder=True,
             save_date_time=False
     ):
+        """
+
+        :rtype: object
+        """
         super().__init__()
 
         if exists(seed):
@@ -255,19 +256,21 @@ class Imagine(nn.Module):
             current_iter_left_pad_five_zeroes = str(current_iteration).zfill(5)
             output_path = f"{output_path}.{current_iter_left_pad_five_zeroes}"
         if self.save_date_time:
-            ts_prepend = datetime.now().strftime("%y%m%d-%H%M%S_%f_")
-            output_path = f"./{ts_prepend}"
+            current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f_")
+            output_path = f"{current_time}_{output_path}"
         return Path(f"{output_path}.png")
 
-    def generate_and_save_image(self, custom_filename: Path = None):
+    def generate_and_save_image(self, custom_filename: Path = None, current_iteration: int = None):
         """
+        :param current_iteration:
         :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
         """
         with torch.no_grad():
-            img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
+            img = self.normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
             img.clamp_(0., 1.)
             self.filename = custom_filename if custom_filename else self.image_output_path()
             save_image(img, self.filename)
+            copyfile(str(self.filename), f"{self.textpath}.png")
             tqdm.write(f'image updated at "./{str(self.filename)}"')
 
     def train_step(self, epoch, iteration):
@@ -285,7 +288,7 @@ class Imagine(nn.Module):
         self.optimizer.zero_grad()
 
         if (iteration % self.save_every == 0) and self.save_progress:
-            self.generate_and_save_image()
+            self.generate_and_save_image(current_iteration=iteration)
 
         return total_loss
 
