@@ -163,6 +163,11 @@ def _download(url, root=os.path.expanduser("~/.cache/clip")):
 
 
 def load():
+    """
+    Downloads the existing CLIP model if necessary, finds and patches devices, then returns a torch model
+    and a Normalize containing the mean and standard deviation of the CLIP training set.
+    :rtype: tuple[Union[RecursiveScriptModule, RecursiveScriptModule], Normalize]
+    """
     device = 'cuda'
     model_path = _download(MODEL_PATH)
     model = torch.jit.load(model_path, map_location=device).eval()
