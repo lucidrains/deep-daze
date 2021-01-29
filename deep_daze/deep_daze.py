@@ -32,6 +32,8 @@ def signal_handling(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handling)
 
+perceptor, normalize_image = load()
+
 
 # Helpers
 
@@ -92,7 +94,6 @@ class DeepDaze(nn.Module):
         super().__init__()
         # load clip
 
-        self.perceptor, self.normalize_image = load()
         self.loss_coef = loss_coef
         self.image_width = image_width
 
@@ -130,13 +131,13 @@ class DeepDaze(nn.Module):
         for size in self.scheduled_sizes[size_slice]:
             apper = rand_cutout(out, size)
             apper = interpolate(apper, 224)
-            pieces.append(self.normalize_image(apper))
+            pieces.append(normalize_image(apper))
 
         image = torch.cat(pieces)
 
         with autocast(enabled=False):
-            image_embed = self.perceptor.encode_image(image)
-            text_embed = self.perceptor.encode_text(text)
+            image_embed = perceptor.encode_image(image)
+            text_embed = perceptor.encode_text(text)
 
         self.num_batches_processed += self.batch_size
 
@@ -207,10 +208,7 @@ class Imagine(nn.Module):
             open_folder=True,
             save_date_time=False
     ):
-        """
 
-        :rtype: object
-        """
         super().__init__()
 
         if exists(seed):
@@ -247,16 +245,17 @@ class Imagine(nn.Module):
     def image_output_path(self, current_iteration: int = None) -> Path:
         """
         Returns underscore separated Path.
-        A current timestamp is prepended if `self.save_date_time` is set
-        Current i
+        A current timestamp is prepended if `self.save_date_time` is set.
+        Sequence number left padded with 6 zeroes is appended if `save_every` is set.
         :rtype: Path
         """
         output_path = self.textpath
         if current_iteration:
-            current_iter_left_pad_five_zeroes = str(current_iteration).zfill(5)
-            output_path = f"{output_path}.{current_iter_left_pad_five_zeroes}"
+            sequence_number = int(current_iteration / self.save_every)
+            sequence_number_left_padded = str(sequence_number).zfill(6)
+            output_path = f"{output_path}.{sequence_number_left_padded}"
         if self.save_date_time:
-            current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f_")
+            current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f")
             output_path = f"{current_time}_{output_path}"
         return Path(f"{output_path}.png")
 
@@ -266,9 +265,9 @@ class Imagine(nn.Module):
         :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
         """
         with torch.no_grad():
-            img = self.normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
+            img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
             img.clamp_(0., 1.)
-            self.filename = custom_filename if custom_filename else self.image_output_path()
+            self.filename = custom_filename if custom_filename else self.image_output_path(current_iteration=current_iteration)
             save_image(img, self.filename)
             copyfile(str(self.filename), f"{self.textpath}.png")
             tqdm.write(f'image updated at "./{str(self.filename)}"')
