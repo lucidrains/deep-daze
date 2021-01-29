@@ -67,6 +67,8 @@ $ imagine "stranger in strange lands" --num-layers 32
 ```
 
 ## Usage
+
+### CLI
 ```bash
 NAME
     imagine
@@ -124,17 +126,72 @@ FLAGS
         Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here`
 ```
 
-If you would like to invoke it in code.
-
+### Python
+#### Invoke `deep_daze.Imagine` in Python
 ```python
 from deep_daze import Imagine
 
 imagine = Imagine(
     text = 'cosmic love and attention',
-    num_layers = 24
+    num_layers = 24,
 )
-
 imagine()
+```
+
+#### Save progress every fourth iteration
+Save images in the format insert_text_here.00001.png, insert_text_here.00002.png, ...up to `(total_iterations % save_every)`
+```python
+imagine = Imagine(
+    text=text,
+    save_every=4,
+    save_progress=True
+)
+```
+
+#### Prepend current timestamp on each image.
+Creates files with both the timestamp and the sequence number.
+
+e.g. 210129-043928_328751_insert_text_here.00001.png, 210129-043928_512351_insert_text_here.00002.png, ...
+```python
+imagine = Imagine(
+    text=text,
+    save_every=4,
+    save_progress=True,
+    save_date_time=True,
+)
+```
+
+#### High GPU memory usage
+If you have at least 16 GiB of vram available, you should be able to run these settings with some wiggle room.
+```python
+imagine = Imagine(
+    text=text,
+    num_layers=42,
+    batch_size=64,
+    gradient_accumulate_every=1,
+)
+```
+
+#### Average GPU memory usage
+```python
+imagine = Imagine(
+    text=text,
+    num_layers=24,
+    batch_size=16,
+    gradient_accumulate_every=2
+)
+```
+
+#### Very low GPU memory usage (less than 4 GiB)
+If you are desperate to run this on a card with less than 8 GiB vram, you can lower the image_width.
+```python
+imagine = Imagine(
+    text=text,
+    image_width=256,
+    num_layers=16,
+    batch_size=1,
+    gradient_accumulate_every=16 # Increase gradient_accumulate_every to correct for loss in low batch sizes
+)
 ```
 
 ## Where is this going?
