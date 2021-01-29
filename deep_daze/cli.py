@@ -19,7 +19,8 @@ def train(
         overwrite=False,
         save_progress=False,
         seed=None,
-        open_folder=True
+        open_folder=True,
+        save_date_time=False
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -36,7 +37,7 @@ def train(
     :param deeper: Uses a Siren neural net with 32 hidden layers.
     :param image_width: The desired resolution of the image.
     :param seed: A seed to be used for deterministic runs.
-
+    :param save_date_time: Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here`
     """
     print('Starting up...')
 
@@ -55,7 +56,8 @@ def train(
         save_every=save_every,
         save_progress=save_progress,
         seed=seed,
-        open_folder=open_folder
+        open_folder=open_folder,
+        save_date_time=save_date_time
     )
 
     if not overwrite and imagine.filename.exists():

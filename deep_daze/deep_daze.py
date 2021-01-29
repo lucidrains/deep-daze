@@ -3,6 +3,7 @@ import signal
 import subprocess
 import sys
 import random
+from datetime import datetime
 from pathlib import Path
 
 import torch
@@ -206,7 +207,8 @@ class Imagine(nn.Module):
             iterations=1050,
             save_progress=False,
             seed=None,
-            open_folder=True
+            open_folder=True,
+            save_date_time=False
     ):
         super().__init__()
 
@@ -229,22 +231,23 @@ class Imagine(nn.Module):
         ).cuda()
 
         self.model = model
-
         self.scaler = GradScaler()
         self.optimizer = Adam(model.parameters(), lr)
         self.gradient_accumulate_every = gradient_accumulate_every
         self.save_every = save_every
+        self.save_date_time = save_date_time
+        self.open_folder = open_folder
 
+        self.set_text(text)
+
+    def set_text(self, text):
         self.text = text
         textpath = self.text.replace(' ', '_')
-
+        if self.save_date_time:
+            textpath = datetime.now().strftime("%y%m%d-%H%M%S-") + textpath
         self.textpath = textpath
         self.filename = Path(f'./{textpath}.png')
-        self.save_progress = save_progress
-
         self.encoded_text = tokenize(text).cuda()
-
-        self.open_folder = open_folder
 
     def train_step(self, epoch, i):
         total_loss = 0
