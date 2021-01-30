@@ -242,7 +242,7 @@ class Imagine(nn.Module):
         self.filename = self.image_output_path()
         self.encoded_text = tokenize(text).cuda()
 
-    def image_output_path(self, current_iteration: int = None) -> Path:
+    def image_output_path(self, current_iteration=None):
         """
         Returns underscore separated Path.
         A current timestamp is prepended if `self.save_date_time` is set.
@@ -259,17 +259,8 @@ class Imagine(nn.Module):
             output_path = f"{current_time}_{output_path}"
         return Path(f"{output_path}.png")
 
-    def replace_current_img(self):
-        """
-        Replace the current file at {text_path}.png with the current self.filename
-        """
-        always_current_img = f"{self.textpath}.png"
-        if os.path.isfile(always_current_img) or os.path.islink(always_current_img):
-            os.remove(always_current_img)  # remove the file
 
-        copy(str(self.filename), always_current_img)
-
-    def generate_and_save_image(self, custom_filename: Path = None, current_iteration: int = None):
+    def generate_and_save_image(self, current_iteration=None):
         """
         :param current_iteration:
         :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
@@ -277,11 +268,11 @@ class Imagine(nn.Module):
         with torch.no_grad():
             img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
             img.clamp_(0., 1.)
-            self.filename = custom_filename if custom_filename else self.image_output_path(current_iteration=current_iteration)
+            self.filename = self.image_output_path(current_iteration=current_iteration)
             save_image(img, self.filename)
-            self.replace_current_image()
-            tqdm.write(f'image updated at "./{str(self.filename)}"')
+            save_image(img, f"{self.textpath}.png")
 
+            tqdm.write(f'image updated at "./{str(self.filename)}"')
 
     def train_step(self, epoch, iteration) -> int:
         total_loss = 0
