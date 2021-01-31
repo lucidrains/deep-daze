@@ -140,11 +140,11 @@ You can prime the generator network with a starting image, before it is steered 
 $ imagine 'a night sky filled with starts' --start-image-path ./cloudy-night-sky.jpg
 ```
 
-Initial starting image
+Primed starting image
 
 <img src="./samples/prime-orig.jpg" width="256px"></img>
 
-Primed with `A pizza with green peppers`
+Then trained with the prompt `A pizza with green peppers`
 
 <img src="./samples/prime-trained.png" width="256px"></img>
 
