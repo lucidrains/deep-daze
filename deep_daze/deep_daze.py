@@ -287,7 +287,8 @@ class Imagine(nn.Module):
         self.optimizer.zero_grad()
 
         if (iteration % self.save_every == 0) and self.save_progress:
-            sequence_number = iteration * epoch / self.save_every
+            current_total_iterations = epoch * self.iterations + iteration
+            sequence_number = current_total_iterations // self.save_every
             self.generate_and_save_image(sequence_number=sequence_number)
 
         return total_loss
