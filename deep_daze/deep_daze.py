@@ -242,7 +242,7 @@ class Imagine(nn.Module):
         self.filename = self.image_output_path()
         self.encoded_text = tokenize(text).cuda()
 
-    def image_output_path(self, current_iteration=None):
+    def image_output_path(self, sequence_number=None):
         """
         Returns underscore separated Path.
         A current timestamp is prepended if `self.save_date_time` is set.
@@ -250,8 +250,7 @@ class Imagine(nn.Module):
         :rtype: Path
         """
         output_path = self.textpath
-        if current_iteration:
-            sequence_number = int(current_iteration / self.save_every)
+        if sequence_number:
             sequence_number_left_padded = str(sequence_number).zfill(6)
             output_path = f"{output_path}.{sequence_number_left_padded}"
         if self.save_date_time:
@@ -259,16 +258,15 @@ class Imagine(nn.Module):
             output_path = f"{current_time}_{output_path}"
         return Path(f"{output_path}.png")
 
-
-    def generate_and_save_image(self, current_iteration=None):
+    def generate_and_save_image(self, sequence_number=None):
         """
-        :param current_iteration:
+        :param sequence_number:
         :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
         """
         with torch.no_grad():
             img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
             img.clamp_(0., 1.)
-            self.filename = self.image_output_path(current_iteration=current_iteration)
+            self.filename = self.image_output_path(sequence_number=sequence_number)
             save_image(img, self.filename)
             save_image(img, f"{self.textpath}.png")
 
@@ -289,7 +287,9 @@ class Imagine(nn.Module):
         self.optimizer.zero_grad()
 
         if (iteration % self.save_every == 0) and self.save_progress:
-            self.generate_and_save_image(current_iteration=iteration)
+            current_total_iterations = epoch * self.iterations + iteration
+            sequence_number = current_total_iterations // self.save_every
+            self.generate_and_save_image(sequence_number=sequence_number)
 
         return total_loss
 
