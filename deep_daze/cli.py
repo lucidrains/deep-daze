@@ -20,7 +20,9 @@ def train(
         save_progress=False,
         seed=None,
         open_folder=True,
-        save_date_time=False
+        save_date_time=False,
+        start_image_path=None,
+        start_image_train_iters=50
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -38,6 +40,8 @@ def train(
     :param image_width: The desired resolution of the image.
     :param seed: A seed to be used for deterministic runs.
     :param save_date_time: Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here.png`
+    :param start_image_path: Path to the image you would like to prime the generator with initially
+    :param start_image_train_iters: Number of iterations for priming, defaults to 50
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -59,7 +63,9 @@ def train(
         save_progress=save_progress,
         seed=seed,
         open_folder=open_folder,
-        save_date_time=save_date_time
+        save_date_time=save_date_time,
+        start_image_path=start_image_path,
+        start_image_train_iters=start_image_train_iters
     )
 
     print('Starting up...')

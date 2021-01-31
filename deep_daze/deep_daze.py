@@ -12,8 +12,12 @@ import torch.nn.functional as F
 from siren_pytorch import SirenNet, SirenWrapper
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
-from torch.optim import Adam
+from torch_optimizer import DiffGrad, AdamP
+
+from PIL import Image
+import torchvision.transforms as T
 from torchvision.utils import save_image
+
 from tqdm import trange, tqdm
 
 from deep_daze.clip import load, tokenize
@@ -206,7 +210,9 @@ class Imagine(nn.Module):
             save_progress=False,
             seed=None,
             open_folder=True,
-            save_date_time=False
+            save_date_time=False,
+            start_image_path=None,
+            start_image_train_iters=10
     ):
 
         super().__init__()
@@ -231,7 +237,7 @@ class Imagine(nn.Module):
 
         self.model = model
         self.scaler = GradScaler()
-        self.optimizer = Adam(model.parameters(), lr)
+        self.optimizer = AdamP(model.parameters(), lr)
         self.gradient_accumulate_every = gradient_accumulate_every
         self.save_every = save_every
         self.save_date_time = save_date_time
@@ -241,6 +247,23 @@ class Imagine(nn.Module):
         self.textpath = text.replace(" ", "_")
         self.filename = self.image_output_path()
         self.encoded_text = tokenize(text).cuda()
+
+        self.start_image = None
+        self.start_image_train_iters = start_image_train_iters
+        if exists(start_image_path):
+            file = Path(start_image_path)
+            assert file.exists(), f'file does not exist at given starting image path {self.start_image_path}'
+            image = Image.open(str(file))
+
+            transform = T.Compose([
+                T.Resize(image_width),
+                T.CenterCrop((image_width, image_width)),
+                T.ToTensor(),
+                T.Normalize(0.5, 0.5)
+            ])
+
+            image_tensor = transform(image)[None, ...].cuda()
+            self.start_image = image_tensor
 
     def image_output_path(self, sequence_number=None):
         """
@@ -294,6 +317,22 @@ class Imagine(nn.Module):
         return total_loss
 
     def forward(self):
+        if exists(self.start_image):
+            tqdm.write('Preparing with initial image...')
+            optim = DiffGrad(self.model.parameters(), lr = 3e-4)
+            pbar = trange(self.start_image_train_iters, desc='iteration')
+            for _ in pbar:
+                loss = self.model.model(self.start_image)
+                loss.backward()
+                pbar.set_description(f'loss: {loss.item():.2f}')
+
+                optim.step()
+                optim.zero_grad()
+
+                if terminate:
+                    print('interrupted by keyboard, gracefully exiting')
+                    return exit()
+
         tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
 
         if self.open_folder:

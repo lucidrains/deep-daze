@@ -124,7 +124,29 @@ FLAGS
     --save_date_time=SAVE_DATE_TIME
         Default: False
         Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here`
+    --start_image_path=START_IMAGE_PATH
+        Default: None
+        The generator is trained first on a starting image before steered towards the textual input
+    --start_image_train_iters=START_IMAGE_TRAIN_ITERS
+        Default: 50
+        The number of steps for the initial training on the starting image
 ```
+
+### Priming
+
+You can prime the generator network with a starting image, before it is steered towards the text. Simply specify the path to the image you wish to use, and optionally the number of initial training steps.
+
+```bash
+$ imagine 'a night sky filled with starts' --start-image-path ./cloudy-night-sky.jpg
+```
+
+Initial starting image
+
+<img src="./samples/prime-orig.jpg" width="256px"></img>
+
+Primed with `A pizza with green peppers`
+
+<img src="./samples/prime-trained.png" width="256px"></img>
 
 ### Python
 #### Invoke `deep_daze.Imagine` in Python

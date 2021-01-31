@@ -30,8 +30,9 @@ setup(
     'einops>=0.3',
     'fire',
     'ftfy',
-    'siren-pytorch>=0.0.7',
+    'siren-pytorch>=0.0.8',
     'torch>=1.7.1',
+    'torch_optimizer',
     'torchvision>=0.8.2',
     'tqdm',
     'regex'
