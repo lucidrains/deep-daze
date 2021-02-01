@@ -333,6 +333,9 @@ class Imagine(nn.Module):
                     print('interrupted by keyboard, gracefully exiting')
                     return exit()
 
+            del self.start_image
+            del optim
+
         tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
 
         if self.open_folder:
