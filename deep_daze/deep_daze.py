@@ -45,6 +45,9 @@ def exists(val):
     return val is not None
 
 
+def default(val, d):
+    return val if exists(val) else d
+
 def interpolate(image, size):
     return F.interpolate(image, (size, size), mode='bilinear', align_corners=False)
 
@@ -94,6 +97,8 @@ class DeepDaze(nn.Module):
             num_layers=8,
             image_width=512,
             loss_coef=100,
+            theta_initial=None,
+            theta_hidden=None
     ):
         super().__init__()
         # load clip
@@ -105,12 +110,17 @@ class DeepDaze(nn.Module):
         self.total_batches = total_batches
         self.num_batches_processed = 0
 
+        w0 = default(theta_hidden, 30.)
+        w0_initial = default(theta_initial, 30.)
+
         siren = SirenNet(
             dim_in=2,
             dim_hidden=256,
             num_layers=num_layers,
             dim_out=3,
-            use_bias=True
+            use_bias=True,
+            w0=w0,
+            w0_initial=w0_initial
         )
 
         self.model = SirenWrapper(
@@ -212,7 +222,9 @@ class Imagine(nn.Module):
             open_folder=True,
             save_date_time=False,
             start_image_path=None,
-            start_image_train_iters=10
+            start_image_train_iters=10,
+            theta_initial=None,
+            theta_hidden=None
     ):
 
         super().__init__()
@@ -232,7 +244,9 @@ class Imagine(nn.Module):
             total_batches=total_batches,
             batch_size=batch_size,
             image_width=image_width,
-            num_layers=num_layers
+            num_layers=num_layers,
+            theta_initial=theta_initial,
+            theta_hidden=theta_hidden
         ).cuda()
 
         self.model = model

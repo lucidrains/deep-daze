@@ -22,7 +22,9 @@ def train(
         open_folder=True,
         save_date_time=False,
         start_image_path=None,
-        start_image_train_iters=50
+        start_image_train_iters=50,
+        theta_initial=None,
+        theta_hidden=None
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -65,7 +67,9 @@ def train(
         open_folder=open_folder,
         save_date_time=save_date_time,
         start_image_path=start_image_path,
-        start_image_train_iters=start_image_train_iters
+        start_image_train_iters=start_image_train_iters,
+        theta_initial=theta_initial,
+        theta_hidden=theta_hidden
     )
 
     print('Starting up...')
