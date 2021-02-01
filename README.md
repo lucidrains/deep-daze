@@ -134,10 +134,12 @@ FLAGS
 
 ### Priming
 
-You can prime the generator network with a starting image, before it is steered towards the text. Simply specify the path to the image you wish to use, and optionally the number of initial training steps.
+Technique first devised and shared by <a href="https://twitter.com/quasimondo">Mario Klingemann</a>, it allows you to prime the generator network with a starting image, before being steered towards the text.
+
+Simply specify the path to the image you wish to use, and optionally the number of initial training steps.
 
 ```bash
-$ imagine 'a night sky filled with starts' --start-image-path ./cloudy-night-sky.jpg
+$ imagine 'a clear night sky filled with stars' --start-image-path ./cloudy-night-sky.jpg
 ```
 
 Primed starting image
