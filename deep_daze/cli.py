@@ -24,7 +24,9 @@ def train(
         start_image_path=None,
         start_image_train_iters=50,
         theta_initial=None,
-        theta_hidden=None
+        theta_hidden=None,
+        start_image_lr=3e-4
+
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -44,6 +46,7 @@ def train(
     :param save_date_time: Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here.png`
     :param start_image_path: Path to the image you would like to prime the generator with initially
     :param start_image_train_iters: Number of iterations for priming, defaults to 50
+    :param start_image_lr: Learning rate for the start image training.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -69,7 +72,8 @@ def train(
         start_image_path=start_image_path,
         start_image_train_iters=start_image_train_iters,
         theta_initial=theta_initial,
-        theta_hidden=theta_hidden
+        theta_hidden=theta_hidden,
+        start_image_lr=start_image_lr,
     )
 
     print('Starting up...')
