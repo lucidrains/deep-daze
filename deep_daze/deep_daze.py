@@ -223,8 +223,9 @@ class Imagine(nn.Module):
             save_date_time=False,
             start_image_path=None,
             start_image_train_iters=10,
+            start_image_lr=3e-4,
             theta_initial=None,
-            theta_hidden=None
+            theta_hidden=None,
     ):
 
         super().__init__()
@@ -264,6 +265,7 @@ class Imagine(nn.Module):
 
         self.start_image = None
         self.start_image_train_iters = start_image_train_iters
+        self.start_image_lr = start_image_lr
         if exists(start_image_path):
             file = Path(start_image_path)
             assert file.exists(), f'file does not exist at given starting image path {self.start_image_path}'
@@ -333,7 +335,7 @@ class Imagine(nn.Module):
     def forward(self):
         if exists(self.start_image):
             tqdm.write('Preparing with initial image...')
-            optim = DiffGrad(self.model.parameters(), lr = 3e-4)
+            optim = DiffGrad(self.model.parameters(), lr = self.start_image_lr)
             pbar = trange(self.start_image_train_iters, desc='iteration')
             for _ in pbar:
                 loss = self.model.model(self.start_image)
