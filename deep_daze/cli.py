@@ -46,6 +46,8 @@ def train(
     :param save_date_time: Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here.png`
     :param start_image_path: Path to the image you would like to prime the generator with initially
     :param start_image_train_iters: Number of iterations for priming, defaults to 50
+    :param theta_initial: Hyperparameter describing the frequency of the color space. Only applies to the first layer of the network.
+    :param theta_hidden: Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
     :param start_image_lr: Learning rate for the start image training.
     """
     # Don't instantiate imagine if the user just wants help.
