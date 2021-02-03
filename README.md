@@ -130,6 +130,12 @@ FLAGS
     --start_image_train_iters=START_IMAGE_TRAIN_ITERS
         Default: 50
         The number of steps for the initial training on the starting image
+    --theta_initial=THETA_INITIAL
+        Default: 30.0
+        Hyperparameter describing the frequency of the color space. Only applies to the first layer of the network.
+    --theta_hidden=THETA_INITIAL
+        Default: 30.0
+        Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
 ```
 
 ### Priming
