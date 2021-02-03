@@ -354,6 +354,8 @@ class Imagine(nn.Module):
 
         tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
 
+        self.model(self.encoded_text) # do one warmup step due to potential issue with CLIP and CUDA
+
         if self.open_folder:
             open_folder('./')
             self.open_folder = False
