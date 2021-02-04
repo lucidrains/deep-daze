@@ -263,7 +263,7 @@ class Imagine(nn.Module):
         self.filename = self.image_output_path()
         self.encoded_text = tokenize(text).cuda()
 
-        self.start_image = None
+        self.start_image = start_image_path
         self.start_image_train_iters = start_image_train_iters
         self.start_image_lr = start_image_lr
         if exists(start_image_path):
