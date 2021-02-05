@@ -163,7 +163,7 @@ class DeepDaze(nn.Module):
         counter = 0
         self.scheduled_sizes = []
 
-        while batches < self.total_batches:
+        while batches <= self.total_batches:
             counter += 1
             sizes = self.sample_sizes(counter)
             batches += len(sizes)
@@ -365,6 +365,10 @@ class Imagine(nn.Module):
             for i in pbar:
                 loss = self.train_step(epoch, i)
                 pbar.set_description(f'loss: {loss.item():.2f}')
+
+                if self.num_batches_processed > self.total_batches:
+                    print('number of batches processed exceeds calculated total batches')
+                    return
 
                 if terminate:
                     print('interrupted by keyboard, gracefully exiting')
