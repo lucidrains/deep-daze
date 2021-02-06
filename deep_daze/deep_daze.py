@@ -131,7 +131,7 @@ class DeepDaze(nn.Module):
 
         self.generate_size_schedule()
 
-    def forward(self, text, return_loss=True):
+    def forward(self, text, return_loss=True, dry_run=False):
         out = self.model()
         out = norm_siren_output(out)
 
@@ -153,7 +153,8 @@ class DeepDaze(nn.Module):
             image_embed = perceptor.encode_image(image)
             text_embed = perceptor.encode_text(text)
 
-        self.num_batches_processed += self.batch_size
+        if not dry_run:
+            self.num_batches_processed += self.batch_size
 
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
         return loss
@@ -354,7 +355,7 @@ class Imagine(nn.Module):
 
         tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
 
-        self.model(self.encoded_text) # do one warmup step due to potential issue with CLIP and CUDA
+        self.model(self.encoded_text, dry_run = True) # do one warmup step due to potential issue with CLIP and CUDA
 
         if self.open_folder:
             open_folder('./')
