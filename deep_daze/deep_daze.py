@@ -298,21 +298,7 @@ class Imagine(nn.Module):
             output_path = f"{current_time}_{output_path}"
         return Path(f"{output_path}.png")
 
-    def generate_and_save_image(self, sequence_number=None):
-        """
-        :param sequence_number:
-        :param custom_filename: A custom filename to use when saving - e.g. "testing.png"
-        """
-        with torch.no_grad():
-            img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
-            img.clamp_(0., 1.)
-            self.filename = self.image_output_path(sequence_number=sequence_number)
-            save_image(img, self.filename)
-            save_image(img, f"{self.textpath}.png")
-
-            tqdm.write(f'image updated at "./{str(self.filename)}"')
-
-    def train_step(self, epoch, iteration) -> int:
+    def train_step(self, epoch, iteration):
         total_loss = 0
 
         for _ in range(self.gradient_accumulate_every):
@@ -327,11 +313,22 @@ class Imagine(nn.Module):
         self.optimizer.zero_grad()
 
         if (iteration % self.save_every == 0) and self.save_progress:
-            current_total_iterations = epoch * self.iterations + iteration
-            sequence_number = current_total_iterations // self.save_every
-            self.generate_and_save_image(sequence_number=sequence_number)
+            self.save_image(epoch, iteration)
 
         return total_loss
+
+    @torch.no_grad()
+    def save_image(self, epoch, iteration):
+        current_total_iterations = epoch * self.iterations + iteration
+        sequence_number = current_total_iterations // self.save_every
+
+        img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
+        img.clamp_(0., 1.)
+        self.filename = self.image_output_path(sequence_number=sequence_number)
+        save_image(img, self.filename)
+        save_image(img, f"{self.textpath}.png")
+
+        tqdm.write(f'image updated at "./{str(self.filename)}"')
 
     def forward(self):
         if exists(self.start_image):
@@ -367,10 +364,8 @@ class Imagine(nn.Module):
                 loss = self.train_step(epoch, i)
                 pbar.set_description(f'loss: {loss.item():.2f}')
 
-                if self.model.num_batches_processed > self.model.total_batches:
-                    print('number of batches processed exceeds calculated total batches')
-                    return
-
                 if terminate:
                     print('interrupted by keyboard, gracefully exiting')
                     return
+
+        self.save_image(self.epochs, self.iterations) # one final save at end
