@@ -38,7 +38,6 @@ signal.signal(signal.SIGINT, signal_handling)
 
 perceptor, normalize_image = load()
 
-
 # Helpers
 
 def exists(val):
@@ -87,6 +86,19 @@ def open_folder(path):
 
 def norm_siren_output(img):
     return ((img + 1) * 0.5).clamp(0, 1)
+
+
+def create_clip_img_transform(image_width):
+    clip_mean = [0.48145466, 0.4578275, 0.40821073]
+    clip_std = [0.26862954, 0.26130258, 0.27577711]
+    transform = T.Compose([
+                    #T.ToPILImage(),
+                    T.Resize(image_width),
+                    T.CenterCrop((image_width, image_width)),
+                    T.ToTensor(),
+                    T.Normalize(mean=clip_mean, std=clip_std)
+            ])
+    return transform
 
 
 class DeepDaze(nn.Module):
@@ -204,11 +216,26 @@ class DeepDaze(nn.Module):
         return sizes
 
 
+    
+def create_text_path(text=None, img=None, encoding=None):
+    if text is not None:
+        input_name = text.replace(" ", "_")
+    elif img is not None:
+        if isinstance(img, str):
+            input_name = "".join(img.replace(" ", "_").split(".")[:-1])
+        else:
+            input_name = "PIL_img"
+    else:
+        input_name = "your_encoding"
+    return input_name
+
 class Imagine(nn.Module):
     def __init__(
             self,
-            text,
             *,
+            text=None,
+            img=None,
+            clip_encoding=None,
             lr=1e-5,
             batch_size=4,
             gradient_accumulate_every=4,
@@ -239,6 +266,7 @@ class Imagine(nn.Module):
 
         self.epochs = epochs
         self.iterations = iterations
+        self.image_width = image_width
         total_batches = epochs * iterations * batch_size * gradient_accumulate_every
 
         model = DeepDaze(
@@ -259,11 +287,13 @@ class Imagine(nn.Module):
         self.open_folder = open_folder
         self.save_progress = save_progress
         self.text = text
-        self.textpath = text.replace(" ", "_")
+        self.image = img
+        self.textpath = create_text_path(text=text, img=img, encoding=clip_encoding)
         self.filename = self.image_output_path()
 
-        tokenized_text = tokenize(text).cuda()
-        self.encoded_text = perceptor.encode_text(tokenized_text).detach()
+        # create coding to optimize for
+        self.clip_img_transform = create_clip_img_transform(perceptor.input_resolution.item())
+        self.clip_encoding = self.create_clip_encoding(text=text, img=img, encoding=clip_encoding)
 
         self.start_image = None
         self.start_image_train_iters = start_image_train_iters
@@ -282,6 +312,32 @@ class Imagine(nn.Module):
 
             image_tensor = transform(image)[None, ...].cuda()
             self.start_image = image_tensor
+            
+    def create_clip_encoding(self, text=None, img=None, encoding=None):
+        self.text = text
+        self.img = img
+        if encoding is not None:
+            return encoding
+        elif text is not None:
+            return self.create_text_encoding(text)
+        elif img is not None:
+            return self.create_img_encoding(img)
+
+    def create_text_encoding(self, text):
+        tokenized_text = tokenize(text).cuda()
+        text_encoding = perceptor.encode_text(tokenized_text).detach()
+        return text_encoding
+    
+    def create_img_encoding(self, img):
+        if isinstance(img, str):
+            img = Image.open(img)
+        normed_img = self.clip_img_transform(img).unsqueeze(0).cuda()
+        img_encoding = perceptor.encode_image(normed_img).detach()
+        return img_encoding
+    
+    def set_clip_encoding(self, text=None, img=None, encoding=None):
+        encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding)
+        self.clip_encoding = encoding
 
     def image_output_path(self, sequence_number=None):
         """
@@ -304,7 +360,7 @@ class Imagine(nn.Module):
 
         for _ in range(self.gradient_accumulate_every):
             with autocast():
-                loss = self.model(self.encoded_text)
+                loss = self.model(self.clip_encoding)
             loss = loss / self.gradient_accumulate_every
             total_loss += loss
             self.scaler.scale(loss).backward()
@@ -323,7 +379,7 @@ class Imagine(nn.Module):
         current_total_iterations = epoch * self.iterations + iteration
         sequence_number = current_total_iterations // self.save_every
 
-        img = normalize_image(self.model(self.encoded_text, return_loss=False).cpu())
+        img = normalize_image(self.model(self.clip_encoding, return_loss=False).cpu())
         img.clamp_(0., 1.)
         self.filename = self.image_output_path(sequence_number=sequence_number)
         save_image(img, self.filename)
@@ -351,9 +407,9 @@ class Imagine(nn.Module):
             del self.start_image
             del optim
 
-        tqdm.write(f'Imagining "{self.text}" from the depths of my weights...')
+        tqdm.write(f'Imagining "{self.textpath}" from the depths of my weights...')
 
-        self.model(self.encoded_text, dry_run = True) # do one warmup step due to potential issue with CLIP and CUDA
+        self.model(self.clip_encoding, dry_run = True) # do one warmup step due to potential issue with CLIP and CUDA
 
         if self.open_folder:
             open_folder('./')
