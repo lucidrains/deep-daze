@@ -131,7 +131,7 @@ class DeepDaze(nn.Module):
 
         self.generate_size_schedule()
 
-    def forward(self, text, return_loss=True, dry_run=False):
+    def forward(self, text_embed, return_loss=True, dry_run=False):
         out = self.model()
         out = norm_siren_output(out)
 
@@ -151,7 +151,6 @@ class DeepDaze(nn.Module):
 
         with autocast(enabled=False):
             image_embed = perceptor.encode_image(image)
-            text_embed = perceptor.encode_text(text)
 
         if not dry_run:
             self.num_batches_processed += self.batch_size
@@ -262,7 +261,9 @@ class Imagine(nn.Module):
         self.text = text
         self.textpath = text.replace(" ", "_")
         self.filename = self.image_output_path()
-        self.encoded_text = tokenize(text).cuda()
+
+        tokenized_text = tokenize(text).cuda()
+        self.encoded_text = perceptor.encode_text(tokenized_text).detach()
 
         self.start_image = None
         self.start_image_train_iters = start_image_train_iters
