@@ -317,7 +317,7 @@ class Imagine(nn.Module):
         self.text = text
         self.img = img
         if encoding is not None:
-            return encoding
+            return encoding.cuda()
         elif text is not None:
             return self.create_text_encoding(text)
         elif img is not None:
@@ -336,7 +336,7 @@ class Imagine(nn.Module):
         return img_encoding
     
     def set_clip_encoding(self, text=None, img=None, encoding=None):
-        encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding)
+        encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding).cuda()
         self.clip_encoding = encoding
 
     def image_output_path(self, sequence_number=None):
