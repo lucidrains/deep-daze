@@ -35,7 +35,8 @@ setup(
     'torch_optimizer',
     'torchvision>=0.8.2',
     'tqdm',
-    'regex'
+    'regex',
+    'clip @ git+https://github.com/openai/CLIP.git@4c0275784d6d9da97ca1f47eaaee31de1867da91'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
