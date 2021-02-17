@@ -25,8 +25,8 @@ def train(
         start_image_train_iters=50,
         theta_initial=None,
         theta_hidden=None,
-        start_image_lr=3e-4
-
+        start_image_lr=3e-4,
+        clip_model_name="ViT-B/32",
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -49,6 +49,7 @@ def train(
     :param theta_initial: Hyperparameter describing the frequency of the color space. Only applies to the first layer of the network.
     :param theta_hidden: Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
     :param start_image_lr: Learning rate for the start image training.
+    :param clip_model_name: Choose from one of two pretrained CLIP models - "ViT-B/32" (standard) or "RN50" (larger)
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -58,7 +59,7 @@ def train(
     num_layers = 32 if deeper else num_layers
 
     imagine = Imagine(
-        text,
+        text=text,
         lr=learning_rate,
         num_layers=num_layers,
         batch_size=batch_size,
@@ -76,6 +77,7 @@ def train(
         theta_initial=theta_initial,
         theta_hidden=theta_hidden,
         start_image_lr=start_image_lr,
+        clip_model_name=clip_model_name
     )
 
     print('Starting up...')

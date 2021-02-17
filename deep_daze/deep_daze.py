@@ -36,7 +36,6 @@ def signal_handling(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handling)
 
-perceptor, normalize_image = load()
 
 # Helpers
 
@@ -157,12 +156,12 @@ class DeepDaze(nn.Module):
         for size in self.scheduled_sizes[size_slice]:
             apper = rand_cutout(out, size)
             apper = interpolate(apper, 224)
-            pieces.append(normalize_image(apper))
+            pieces.append(self.normalize_image(apper))
 
         image = torch.cat(pieces)
 
         with autocast(enabled=False):
-            image_embed = perceptor.encode_image(image)
+            image_embed = self.perceptor.encode_image(image)
 
         if not dry_run:
             self.num_batches_processed += self.batch_size
@@ -216,7 +215,7 @@ class DeepDaze(nn.Module):
         return sizes
 
 
-    
+
 def create_text_path(text=None, img=None, encoding=None):
     if text is not None:
         input_name = text.replace(" ", "_")
@@ -228,6 +227,9 @@ def create_text_path(text=None, img=None, encoding=None):
     else:
         input_name = "your_encoding"
     return input_name
+
+
+pretrained_clip_models = [ "RN50", "ViT-B/32" ]
 
 class Imagine(nn.Module):
     def __init__(
@@ -253,9 +255,13 @@ class Imagine(nn.Module):
             start_image_lr=3e-4,
             theta_initial=None,
             theta_hidden=None,
+            clip_model_name="ViT-B/32",
     ):
-
         super().__init__()
+        if clip_model_name not in pretrained_clip_models:
+            tqdm.write(f"Failed to initialize clip. Model name {clip_model_name} not found.")
+
+        self.perceptor, normalize_image = load(clip_model_name)
 
         if exists(seed):
             tqdm.write(f'setting seed: {seed}')
@@ -292,7 +298,7 @@ class Imagine(nn.Module):
         self.filename = self.image_output_path()
 
         # create coding to optimize for
-        self.clip_img_transform = create_clip_img_transform(perceptor.input_resolution.item())
+        self.clip_img_transform = create_clip_img_transform(self.perceptor.input_resolution.item())
         self.clip_encoding = self.create_clip_encoding(text=text, img=img, encoding=clip_encoding)
 
         self.start_image = None
@@ -312,7 +318,7 @@ class Imagine(nn.Module):
 
             image_tensor = transform(image)[None, ...].cuda()
             self.start_image = image_tensor
-            
+
     def create_clip_encoding(self, text=None, img=None, encoding=None):
         self.text = text
         self.img = img
@@ -325,16 +331,16 @@ class Imagine(nn.Module):
 
     def create_text_encoding(self, text):
         tokenized_text = tokenize(text).cuda()
-        text_encoding = perceptor.encode_text(tokenized_text).detach()
+        text_encoding = self.perceptor.encode_text(tokenized_text).detach()
         return text_encoding
-    
+
     def create_img_encoding(self, img):
         if isinstance(img, str):
             img = Image.open(img)
         normed_img = self.clip_img_transform(img).unsqueeze(0).cuda()
-        img_encoding = perceptor.encode_image(normed_img).detach()
+        img_encoding = self.perceptor.encode_image(normed_img).detach()
         return img_encoding
-    
+
     def set_clip_encoding(self, text=None, img=None, encoding=None):
         encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding).cuda()
         self.clip_encoding = encoding
@@ -379,7 +385,7 @@ class Imagine(nn.Module):
         current_total_iterations = epoch * self.iterations + iteration
         sequence_number = current_total_iterations // self.save_every
 
-        img = normalize_image(self.model(self.clip_encoding, return_loss=False).cpu())
+        img = self.normalize_image(self.model(self.clip_encoding, return_loss=False).cpu())
         img.clamp_(0., 1.)
         self.filename = self.image_output_path(sequence_number=sequence_number)
         save_image(img, self.filename)
