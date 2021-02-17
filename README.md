@@ -20,7 +20,7 @@
 
 *life during the plague*
 
-<img src="./samples/peace-sunlit-forest.png" width="200px"></img>
+<img src="./samples/peace-sunlit-fo/home/landon/projects/deep-dazerest.png" width="200px"></img>
 
 *meditative peace in a sunlit forest*
 
@@ -136,6 +136,9 @@ FLAGS
     --theta_hidden=THETA_INITIAL
         Default: 30.0
         Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
+    --clip_model_name=CLIP_MODEL_NAME
+        Default: 'ViT-B/32'
+        Choose from one of two pretrained CLIP models - "ViT-B/32" (standard) or "RN50" (larger)
 ```
 
 ### Priming
