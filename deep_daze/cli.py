@@ -58,7 +58,7 @@ def train(
     num_layers = 32 if deeper else num_layers
 
     imagine = Imagine(
-        text,
+        text=text,
         lr=learning_rate,
         num_layers=num_layers,
         batch_size=batch_size,
