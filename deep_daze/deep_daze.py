@@ -85,7 +85,7 @@ def open_folder(path):
 
 
 def norm_siren_output(img):
-    return ((img + 1) * 0.5).clamp(0, 1)
+    return ((img + 1) * 0.5).clamp(0.0, 1.0)
 
 
 def create_clip_img_transform(image_width):
@@ -168,7 +168,7 @@ class DeepDaze(nn.Module):
             self.num_batches_processed += self.batch_size
 
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
-        return loss
+        return out, loss
 
     def generate_size_schedule(self):
         batches = 0
@@ -228,6 +228,7 @@ def create_text_path(text=None, img=None, encoding=None):
     else:
         input_name = "your_encoding"
     return input_name
+
 
 class Imagine(nn.Module):
     def __init__(
@@ -360,7 +361,7 @@ class Imagine(nn.Module):
 
         for _ in range(self.gradient_accumulate_every):
             with autocast():
-                loss = self.model(self.clip_encoding)
+                out, loss = self.model(self.clip_encoding)
             loss = loss / self.gradient_accumulate_every
             total_loss += loss
             self.scaler.scale(loss).backward()
@@ -372,7 +373,7 @@ class Imagine(nn.Module):
         if (iteration % self.save_every == 0) and self.save_progress:
             self.save_image(epoch, iteration)
 
-        return total_loss
+        return out, total_loss
 
     @torch.no_grad()
     def save_image(self, epoch, iteration):
@@ -418,7 +419,7 @@ class Imagine(nn.Module):
         for epoch in trange(self.epochs, desc='epochs'):
             pbar = trange(self.iterations, desc='iteration')
             for i in pbar:
-                loss = self.train_step(epoch, i)
+                _, loss = self.train_step(epoch, i)
                 pbar.set_description(f'loss: {loss.item():.2f}')
 
                 if terminate:
