@@ -219,7 +219,7 @@ class DeepDaze(nn.Module):
     
 def create_text_path(text=None, img=None, encoding=None):
     if text is not None:
-        input_name = text.replace(" ", "_")
+        input_name = text.replace(" ", "_")[:perceptor.context_length]
     elif img is not None:
         if isinstance(img, str):
             input_name = "".join(img.replace(" ", "_").split(".")[:-1])
@@ -237,6 +237,7 @@ class Imagine(nn.Module):
             text=None,
             img=None,
             clip_encoding=None,
+            create_story=False,
             lr=1e-5,
             batch_size=4,
             gradient_accumulate_every=4,
@@ -264,12 +265,27 @@ class Imagine(nn.Module):
             torch.cuda.manual_seed(seed)
             random.seed(seed)
             torch.backends.cudnn.deterministic = True
-
-        self.epochs = epochs
+            
+        # fields for story creation:
+        self.create_story = create_story
+        self.words = None
+        self.all_words = text.split(" ") if text is not None else None
+        self.num_start_words = 3
+        self.words_per_epoch = 3
+        if create_story:
+            assert text is not None,  "We need text input to create a story..."
+            # overwrite epochs to match story length
+            num_words = len(self.all_words)
+            self.epochs = 1 + (num_words - self.num_start_words) / self.words_per_epoch
+            # add one epoch if not divisible
+            self.epochs = int(self.epochs) if int(self.epochs) == self.epochs else int(self.epochs) + 1
+            print("Running for ", self.epochs, "epochs")
+        else: 
+            self.epochs = epochs
+        
         self.iterations = iterations
         self.image_width = image_width
-        total_batches = epochs * iterations * batch_size * gradient_accumulate_every
-
+        total_batches = self.epochs * self.iterations * batch_size * gradient_accumulate_every
         model = DeepDaze(
             total_batches=total_batches,
             batch_size=batch_size,
@@ -291,7 +307,7 @@ class Imagine(nn.Module):
         self.image = img
         self.textpath = create_text_path(text=text, img=img, encoding=clip_encoding)
         self.filename = self.image_output_path()
-
+        
         # create coding to optimize for
         self.clip_img_transform = create_clip_img_transform(perceptor.input_resolution.item())
         self.clip_encoding = self.create_clip_encoding(text=text, img=img, encoding=clip_encoding)
@@ -318,27 +334,61 @@ class Imagine(nn.Module):
         self.text = text
         self.img = img
         if encoding is not None:
-            return encoding.cuda()
+            encoding = encoding.cuda()
+        elif self.create_story:
+            encoding = self.update_story_encoding(epoch=0, iteration=1)
+        elif text is not None and img is not None:
+            encoding = (self.create_text_encoding(text) + self.create_img_encoding(img)) / 2
         elif text is not None:
-            return self.create_text_encoding(text)
+            encoding = self.create_text_encoding(text)
         elif img is not None:
-            return self.create_img_encoding(img)
+            encoding = self.create_img_encoding(img)
+        return encoding
 
     def create_text_encoding(self, text):
         tokenized_text = tokenize(text).cuda()
-        text_encoding = perceptor.encode_text(tokenized_text).detach()
+        with torch.no_grad():
+            text_encoding = perceptor.encode_text(tokenized_text).detach()
         return text_encoding
     
     def create_img_encoding(self, img):
         if isinstance(img, str):
             img = Image.open(img)
         normed_img = self.clip_img_transform(img).unsqueeze(0).cuda()
-        img_encoding = perceptor.encode_image(normed_img).detach()
+        with torch.no_grad():
+            img_encoding = perceptor.encode_image(normed_img).detach()
         return img_encoding
     
     def set_clip_encoding(self, text=None, img=None, encoding=None):
-        encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding).cuda()
-        self.clip_encoding = encoding
+        encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding)
+        self.clip_encoding = encoding.cuda()
+        
+    def update_story_encoding(self, epoch, iteration):
+        if self.words is None:
+            self.words = " ".join(self.all_words[:self.num_start_words])
+            self.all_words = self.all_words[self.num_start_words:]
+        else:
+            # add words_per_epoch new words
+            count = 0
+            while count < self.words_per_epoch and len(self.all_words) > 0:
+                new_word = self.all_words[0]
+                self.words = " ".join(self.words.split(" ") + [new_word])
+                self.all_words = self.all_words[1:]
+                count += 1
+                # TODO: possibly do not increase count for stop-words and break if a "." is encountered.
+            # remove words until it fits in context length
+            while len(self.words) > perceptor.context_length:
+                # remove first word
+                self.words = " ".join(self.words.split(" ")[1:])
+        # get new encoding
+        print("Now thinking of: ", '"', self.words, '"')
+        sequence_number = self.get_img_sequence_number(epoch, iteration)
+        # save new words to disc
+        with open("story_transitions.txt", "a") as f:
+            f.write(f"{epoch}, {sequence_number}, {self.words}\n")
+        
+        encoding = self.create_text_encoding(self.words)
+        return encoding
 
     def image_output_path(self, sequence_number=None):
         """
@@ -364,24 +414,30 @@ class Imagine(nn.Module):
                 out, loss = self.model(self.clip_encoding)
             loss = loss / self.gradient_accumulate_every
             total_loss += loss
-            self.scaler.scale(loss).backward()
-
+            self.scaler.scale(loss).backward()    
+        #out = normalize_image(out.cpu().float()).clamp(0., 1.)
+        out = out.cpu().float().clamp(0., 1.)
         self.scaler.step(self.optimizer)
         self.scaler.update()
         self.optimizer.zero_grad()
 
         if (iteration % self.save_every == 0) and self.save_progress:
-            self.save_image(epoch, iteration)
+            self.save_image(epoch, iteration, img=out)
 
         return out, total_loss
-
-    @torch.no_grad()
-    def save_image(self, epoch, iteration):
+    
+    def get_img_sequence_number(self, epoch, iteration):
         current_total_iterations = epoch * self.iterations + iteration
         sequence_number = current_total_iterations // self.save_every
+        return sequence_number
 
-        img = normalize_image(self.model(self.clip_encoding, return_loss=False).cpu())
-        img.clamp_(0., 1.)
+    @torch.no_grad()
+    def save_image(self, epoch, iteration, img=None):
+        sequence_number = self.get_img_sequence_number(epoch, iteration)
+
+        if img is None:
+            #img = normalize_image(self.model(self.clip_encoding, return_loss=False).cpu().float()).clamp(0., 1.)
+            img = self.model(self.clip_encoding, return_loss=False).cpu().float().clamp(0., 1.)
         self.filename = self.image_output_path(sequence_number=sequence_number)
         save_image(img, self.filename)
         save_image(img, f"{self.textpath}.png")
@@ -410,7 +466,8 @@ class Imagine(nn.Module):
 
         tqdm.write(f'Imagining "{self.textpath}" from the depths of my weights...')
 
-        self.model(self.clip_encoding, dry_run = True) # do one warmup step due to potential issue with CLIP and CUDA
+        with torch.no_grad():
+            self.model(self.clip_encoding, dry_run=True) # do one warmup step due to potential issue with CLIP and CUDA
 
         if self.open_folder:
             open_folder('./')
@@ -425,5 +482,8 @@ class Imagine(nn.Module):
                 if terminate:
                     print('interrupted by keyboard, gracefully exiting')
                     return
+            # Update clip_encoding per epoch if we are creating a story
+            if self.create_story:
+                self.clip_encoding = self.update_story_encoding(epoch, i)
 
         self.save_image(self.epochs, self.iterations) # one final save at end
