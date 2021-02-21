@@ -402,7 +402,7 @@ class Imagine(nn.Module):
 
                 if terminate:
                     print('interrupted by keyboard, gracefully exiting')
-                    return exit()
+                    return sys.exit()
 
             del self.start_image
             del optim
