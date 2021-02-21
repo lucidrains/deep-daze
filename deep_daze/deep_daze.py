@@ -322,8 +322,9 @@ class Imagine(nn.Module):
             return self.create_text_encoding(text)
         elif img is not None:
             return self.create_img_encoding(img)
-
-    def create_text_encoding(self, text):
+    
+    @staticmethod
+    def create_text_encoding(text):
         tokenized_text = tokenize(text).cuda()
         text_encoding = perceptor.encode_text(tokenized_text).detach()
         return text_encoding
