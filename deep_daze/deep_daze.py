@@ -255,6 +255,8 @@ class Imagine(nn.Module):
             start_image_lr=3e-4,
             theta_initial=None,
             theta_hidden=None,
+            story_start_words=5,
+            story_words_per_epoch=5,
     ):
 
         super().__init__()
@@ -270,8 +272,8 @@ class Imagine(nn.Module):
         self.create_story = create_story
         self.words = None
         self.all_words = text.split(" ") if text is not None else None
-        self.num_start_words = 3
-        self.words_per_epoch = 3
+        self.num_start_words = story_start_words
+        self.words_per_epoch = story_words_per_epoch
         if create_story:
             assert text is not None,  "We need text input to create a story..."
             # overwrite epochs to match story length
