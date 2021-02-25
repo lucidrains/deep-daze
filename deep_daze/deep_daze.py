@@ -174,7 +174,7 @@ class DeepDaze(nn.Module):
         width = out.shape[-1]
         lower_bound = self.lower_bound_cutout
         if self.saturate_bound:
-            limit = 0.97 # cutouts above this value lead to destabilization
+            limit = 0.8 # cutouts above this value lead to destabilization
             progress_fraction = self.num_batches_processed / self.total_batches
             lower_bound += (limit - self.lower_bound_cutout) * progress_fraction
             
@@ -370,7 +370,7 @@ class Imagine(nn.Module):
         if self.save_date_time:
             current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f")
             output_path = f"{current_time}_{output_path}"
-        return Path(f"{output_path}.png")
+        return Path(f"{output_path}.jpg")
 
     def train_step(self, epoch, iteration):
         total_loss = 0
@@ -403,8 +403,12 @@ class Imagine(nn.Module):
         if img is None:
             img = self.model(self.clip_encoding, return_loss=False).cpu().float().clamp(0., 1.)
         self.filename = self.image_output_path(sequence_number=sequence_number)
-        save_image(img, self.filename)
-        save_image(img, f"{self.textpath}.png")
+        
+        pil_img = T.ToPILImage()(img.squeeze())
+        pil_img.save(self.filename, quality=95, subsampling=0)
+        pil_img.save(f"{self.textpath}.jpg", quality=95, subsampling=0)
+        #save_image(img, self.filename)
+        #save_image(img, f"{self.textpath}.png")
 
         tqdm.write(f'image updated at "./{str(self.filename)}"')
 
@@ -450,4 +454,4 @@ class Imagine(nn.Module):
             if self.create_story:
                 self.clip_encoding = self.update_story_encoding(epoch, i)
 
-        self.save_image(self.epochs, i) # one final save at end
+        self.save_image(epoch, i) # one final save at end
