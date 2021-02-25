@@ -78,9 +78,33 @@ SYNOPSIS
 
 POSITIONAL ARGUMENTS
     TEXT
-        (required) A phrase less than 77 characters which you would like to visualize.
+        (required for CLI) A phrase less than 77 characters which you would like to visualize.
 
 FLAGS
+    --img=IMAGE_PATH
+        Default: None
+        Path to png/jpg image or PIL image to optimize on
+    --encoding=ENCODING
+        Default: None
+        User-created custom CLIP encoding. If used, replaces any text or image that was used.
+    --create_story=CREATE_STORY
+        Default: False
+        Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
+    --story_start_words=STORY_START_WORDS
+        Default: 5
+        Only used if create_story is True. How many words to optimize on for the first epoch.
+    --story_words_per_epoch=STORY_WORDS_PER_EPOCH
+        Default: 5
+        Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    --lower_bound_cutout=LOWER_BOUND_CUTOUT
+        Default: 0.1
+        Lower bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should be smaller than 0.8.
+    --upper_bound_cutout=UPPER_BOUND_CUTOUT
+        Default: 1.0
+        Upper bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should probably stay at 1.0.
+    --saturate_bound=SATURATE_BOUND
+        Default: False
+        If True, the LOWER_BOUND_CUTOUT is linearly increased to 0.9 during training.
     --learning_rate=LEARNING_RATE
         Default: 1e-05
         The learning rate of the neural net.
