@@ -119,7 +119,7 @@ FLAGS
         Default: None
         A seed to be used for deterministic runs.
     --open_folder=OPEN_FOLDER
-        Default: True
+        Default: False
         Whether or not to open a folder showing your generated images.
     --save_date_time=SAVE_DATE_TIME
         Default: False
