@@ -246,7 +246,7 @@ class Imagine(nn.Module):
             num_layers=16,
             epochs=20,
             iterations=1050,
-            save_progress=False,
+            save_progress=True,
             seed=None,
             open_folder=True,
             save_date_time=False,
@@ -414,8 +414,8 @@ class Imagine(nn.Module):
                 out, loss = self.model(self.clip_encoding)
             loss = loss / self.gradient_accumulate_every
             total_loss += loss
-            self.scaler.scale(loss).backward()    
-        #out = normalize_image(out.cpu().float()).clamp(0., 1.)
+            self.scaler.scale(loss).backward()
+
         out = out.cpu().float().clamp(0., 1.)
         self.scaler.step(self.optimizer)
         self.scaler.update()

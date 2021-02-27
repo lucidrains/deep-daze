@@ -17,7 +17,7 @@ def train(
         image_width=512,
         deeper=False,
         overwrite=False,
-        save_progress=False,
+        save_progress=True,
         seed=None,
         open_folder=True,
         save_date_time=False,
