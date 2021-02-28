@@ -210,7 +210,7 @@ class Imagine(nn.Module):
             num_layers=16,
             epochs=20,
             iterations=1050,
-            save_progress=False,
+            save_progress=True,
             seed=None,
             open_folder=True,
             save_date_time=False,
