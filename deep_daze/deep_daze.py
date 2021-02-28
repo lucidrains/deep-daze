@@ -159,6 +159,7 @@ class DeepDaze(nn.Module):
         )
 
         self.saturate_bound = saturate_bound
+        self.saturate_limit = 0.75 # cutouts above this value lead to destabilization
         self.lower_bound_cutout = lower_bound_cutout
         self.upper_bound_cutout = upper_bound_cutout
 
@@ -174,9 +175,8 @@ class DeepDaze(nn.Module):
         width = out.shape[-1]
         lower_bound = self.lower_bound_cutout
         if self.saturate_bound:
-            limit = 0.8 # cutouts above this value lead to destabilization
             progress_fraction = self.num_batches_processed / self.total_batches
-            lower_bound += (limit - self.lower_bound_cutout) * progress_fraction
+            lower_bound += (self.saturate_limit - self.lower_bound_cutout) * progress_fraction
             
         lower = lower_bound * width
         upper = self.upper_bound_cutout * width
