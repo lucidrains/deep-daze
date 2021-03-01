@@ -214,7 +214,7 @@ The network's interpretation:
 #### Optimize for text and image combined
 
 ```bash
-$ imagine "A psychedelic experience." --img ./hot-dog.jpg
+$ imagine "A psychedelic experience." --img samples/hot-dog.jpg
 ```
 The network's interpretation:  
 <img src="./samples/psychedelic_hot_dog.png" width="256px"></img>
@@ -222,6 +222,14 @@ The network's interpretation:
 
 ### New: Create a story
 The regular mode for texts only allows 77 characters. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`.
+
+Given the poem “Stopping by Woods On a Snowy Evening” by Robert Frost - 
+"Whose woods these are I think I know. His house is in the village though; He will not see me stopping here To watch his woods fill up with snow. My little horse must think it queer To stop without a farmhouse near Between the woods and frozen lake The darkest evening of the year. He gives his harness bells a shake To ask if there is some mistake. The only other sound’s the sweep Of easy wind and downy flake. The woods are lovely, dark and deep, But I have promises to keep, And miles to go before I sleep, And miles to go before I sleep.".
+
+We get:
+
+https://user-images.githubusercontent.com/19983153/109539633-d671ef80-7ac1-11eb-8d8c-380332d7c868.mp4
+
 
 
 ### Python
