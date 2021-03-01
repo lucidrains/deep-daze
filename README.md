@@ -183,7 +183,9 @@ $ imagine 'a clear night sky filled with stars' --start-image-path ./cloudy-nigh
 Primed starting image
 
 <img src="./samples/prime-orig.jpg" width="256px"></img>
+
 Then trained with the prompt `A pizza with green pepper.`
+
 <img src="./samples/prime-trained.png" width="256px"></img>
 
 
@@ -194,13 +196,19 @@ We can also feed in an image as an optimization goal, instead of only priming th
 $ imagine --img ./Autumn_1875_Frederic_Edwin_Church.jpg
 ```
 Original image:
+
 <img src="./samples/Autumn_1875_Frederic_Edwin_Church_original.jpg" width="256px"></img>
-The network's interpretation:
+
+The network's interpretation:  
+
 <img src="./samples/Autumn_1875_Frederic_Edwin_Church.jpg" width="256px"></img>
 
 Original image:
+
 <img src="./samples/hot-dog.jpg" width="256px"></img>
-The network's interpretation:
+
+The network's interpretation:  
+
 <img src="./samples/hot-dog_imagined.png" width="256px"></img>
 
 #### Optimize for text and image combined
@@ -208,7 +216,7 @@ The network's interpretation:
 ```bash
 $ imagine "A psychedelic experience." --img ./hot-dog.jpg
 ```
-The network's interpretation:
+The network's interpretation:  
 <img src="./samples/psychedelic_hot_dog.png" width="256px"></img>
 
 ### Python
