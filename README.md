@@ -193,7 +193,7 @@ Then trained with the prompt `A pizza with green pepper.`
 
 We can also feed in an image as an optimization goal, instead of only priming the generator network. Deepdaze will then render its own interpretation of that image:
 ```bash
-$ imagine --img ./Autumn_1875_Frederic_Edwin_Church.jpg
+$ imagine --img samples/Autumn_1875_Frederic_Edwin_Church.jpg
 ```
 Original image:
 
