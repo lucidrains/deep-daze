@@ -219,6 +219,11 @@ $ imagine "A psychedelic experience." --img ./hot-dog.jpg
 The network's interpretation:  
 <img src="./samples/psychedelic_hot_dog.png" width="256px"></img>
 
+
+### New: Create a story
+The regular mode for texts only allows 77 characters. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`.
+
+
 ### Python
 #### Invoke `deep_daze.Imagine` in Python
 ```python
