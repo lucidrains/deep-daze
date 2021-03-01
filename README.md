@@ -188,6 +188,31 @@ Then trained with the prompt `A pizza with green peppers`
 
 <img src="./samples/prime-trained.png" width="256px"></img>
 
+
+### Optimize for the interpretation of an image
+
+We can also feed in an image as an optimization goal, instead of only priming the generator network. Deepdaze will then render its own interpretation of that image:
+```bash
+$ imagine --img ./Autumn_1875_Frederic_Edwin_Church.jpg
+```
+Original image:
+<img src="./samples/Autumn_1875_Frederic_Edwin_Church_original.jpg" width="256px"></img>
+The network's interpretation:
+<img src="./samples/Autumn_1875_Frederic_Edwin_Church.jpg" width="256px"></img>
+
+Original image:
+<img src="./samples/hot-dog.jpg" width="256px"></img>
+The network's interpretation:
+<img src="./samples/hot-dog_imagined.jpg" width="256px"></img>
+
+#### Optimize for text and image combined
+
+```bash
+$ imagine "A psychedelic experience." --img ./hot-dog.jpg
+```
+The network's interpretation:
+<img src="./samples/psychedelic_hot_dog.jpg" width="256px"></img>
+
 ### Python
 #### Invoke `deep_daze.Imagine` in Python
 ```python
