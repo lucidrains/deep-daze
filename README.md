@@ -183,9 +183,7 @@ $ imagine 'a clear night sky filled with stars' --start-image-path ./cloudy-nigh
 Primed starting image
 
 <img src="./samples/prime-orig.jpg" width="256px"></img>
-
-Then trained with the prompt `A pizza with green peppers`
-
+Then trained with the prompt `A pizza with green pepper.`
 <img src="./samples/prime-trained.png" width="256px"></img>
 
 
@@ -203,7 +201,7 @@ The network's interpretation:
 Original image:
 <img src="./samples/hot-dog.jpg" width="256px"></img>
 The network's interpretation:
-<img src="./samples/hot-dog_imagined.jpg" width="256px"></img>
+<img src="./samples/hot-dog_imagined.png" width="256px"></img>
 
 #### Optimize for text and image combined
 
@@ -211,7 +209,7 @@ The network's interpretation:
 $ imagine "A psychedelic experience." --img ./hot-dog.jpg
 ```
 The network's interpretation:
-<img src="./samples/psychedelic_hot_dog.jpg" width="256px"></img>
+<img src="./samples/psychedelic_hot_dog.png" width="256px"></img>
 
 ### Python
 #### Invoke `deep_daze.Imagine` in Python
