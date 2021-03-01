@@ -256,45 +256,24 @@ imagine = Imagine(
 )
 ```
 
-<<<<<<< HEAD
 ### VRAM and speed benchmarks:
 These experiments were conducted with a 2060 Super RTX and a 3700X Ryzen 5. We first mention the parameters (bs = batch size), then the memory usage and in some cases the training iterations per second:
 
 For an image resolution of 512: 
-    * bs==1,  num_layers==22 - 7.96 GB
-    * bs==2,  num_layers==20 - 7.5 GB
-    * bs==16, num_layers==16 - 6.5 GB
+* bs 1,  num_layers 22: 7.96 GB
+* bs 2,  num_layers 20: 7.5 GB
+* bs 16, num_layers 16: 6.5 GB
 
 For an image resolution of 256:
-    * bs==8, num_layers==48 - 5.3 GB
-    * bs==16, num_layers==48 - 5.46 GB - 2.0 it/s
-    * bs==32, num_layers==48 - 5.92 GB - 1.67 it/s
-    * bs==8, num_layers==44 - 5 GB - 2.39 it/s
-    * bs==32, num_layers==44, grad_acc==1 - 5.62 GB - 4.83 it/s
-    * bs==96, num_layers==44, grad_acc==1 - 7.51 GB - 2.77 it/s
-    * bs==32, num_layers==66, grad_acc==1 - 7.09 GB - 3.7 it/s
+* bs 8, num_layers 48: 5.3 GB
+* bs 16, num_layers 48: 5.46 GB - 2.0 it/s
+* bs 32, num_layers 48: 5.92 GB - 1.67 it/s
+* bs 8, num_layers 44: 5 GB - 2.39 it/s
+* bs 32, num_layers 44, grad_acc 1: 5.62 GB - 4.83 it/s
+* bs 96, num_layers 44, grad_acc 1: 7.51 GB - 2.77 it/s
+* bs 32, num_layers 66, grad_acc 1: 7.09 GB - 3.7 it/s
     
 @NotNANtoN recommends a batch size of 32 with 44 layers and training 1-8 epochs.
-=======
-### Some VRAM and speed benchmarks:
-These experiments were conducted with a 2060 Super RTX and a 3700X Ryzen 5. We first mention the parameters (bs = batch size), then the memory usage and in some cases the training iterations per second:
-
-For an image resolution of 512: 
-    bs==1,  num_layers==22 - 7.96 GB
-    bs==2,  num_layers==20 - 7.5 GB
-    bs==16, num_layers==16 - 6.5 GB
-
-For an image resolution of 256:
-    bs==8, num_layers==48 - 5.3 GB
-    bs==16, num_layers==48 - 5.46 GB - 2.0 it/s
-    bs==32, num_layers==48 - 5.92 GB - 1.67 it/s
-    bs==8, num_layers==44 - 5 GB - 2.39 it/s
-    bs==32, num_layers==44, grad_acc==1 - 5.62 GB - 4.83 it/s
-    bs==96, num_layers==44, grad_acc==1 - 7.51 GB - 2.77 it/s
-    bs==32, num_layers==66, grad_acc==1 - 7.09 GB - 3.7 it/s
-    
-@NotNANtoN recommends a batch size of 32 with 44 layers.
->>>>>>> b2cc154138e35a5db0ff1937674a98f3d6f8883e
 
 
 ## Where is this going?
