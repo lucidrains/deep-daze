@@ -24,11 +24,11 @@
 
 *meditative peace in a sunlit forest*
 
-<img src="./samples/A_man_painting_a_completely_red_image.jpg" width="256px"></img>
+<img src="./samples/A_man_painting_a_completely_red_image.png" width="256px"></img>
 
 *a man painting a completely red image*
 
-<img src="./samples/A_psychedelic_experience_on_LSD.jpg" width="256px"></img>
+<img src="./samples/A_psychedelic_experience_on_LSD.png" width="256px"></img>
 
 *a psychedelic experience on LSD*
 
