@@ -6,7 +6,8 @@ from deep_daze import Imagine
 
 
 def train(
-        text,
+        text=None,
+        img=None,
         learning_rate=1e-5,
         num_layers=16,
         batch_size=4,
@@ -35,6 +36,7 @@ def train(
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
+    :param img: The path to a jpg or png image which you would like to imagine. Can be combined with text.
     :param learning_rate: The learning rate of the neural net.
     :param num_layers: The number of hidden layers to use in the Siren neural net.
     :param batch_size: The number of generated images to pass into Siren before calculating loss. Decreasing this can lower memory and accuracy.
@@ -70,6 +72,7 @@ def train(
 
     imagine = Imagine(
         text=text,
+        img=img,
         lr=learning_rate,
         num_layers=num_layers,
         batch_size=batch_size,
