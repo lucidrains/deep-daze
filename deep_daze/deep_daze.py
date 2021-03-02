@@ -47,6 +47,7 @@ def exists(val):
 def default(val, d):
     return val if exists(val) else d
 
+
 def interpolate(image, size):
     return F.interpolate(image, (size, size), mode='bilinear', align_corners=False)
 
@@ -101,6 +102,19 @@ def create_clip_img_transform(image_width):
     return transform
 
 
+def create_text_path(text=None, img=None, encoding=None):
+    if text is not None:
+        input_name = text.replace(" ", "_")[:perceptor.context_length]
+    elif img is not None:
+        if isinstance(img, str):
+            input_name = "".join(img.replace(" ", "_").split(".")[:-1])
+        else:
+            input_name = "PIL_img"
+    else:
+        input_name = "your_encoding"
+    return input_name
+
+
 class DeepDaze(nn.Module):
     def __init__(
             self,
@@ -110,7 +124,10 @@ class DeepDaze(nn.Module):
             image_width=512,
             loss_coef=100,
             theta_initial=None,
-            theta_hidden=None
+            theta_hidden=None,
+            lower_bound_cutout=0.1, # should be smaller than 0.8
+            upper_bound_cutout=1.0,
+            saturate_bound=False,
     ):
         super().__init__()
         # load clip
@@ -141,7 +158,11 @@ class DeepDaze(nn.Module):
             image_height=image_width
         )
 
-        self.generate_size_schedule()
+        self.saturate_bound = saturate_bound
+        self.saturate_limit = 0.75 # cutouts above this value lead to destabilization
+        self.lower_bound_cutout = lower_bound_cutout
+        self.upper_bound_cutout = upper_bound_cutout
+
 
     def forward(self, text_embed, return_loss=True, dry_run=False):
         out = self.model()
@@ -150,84 +171,28 @@ class DeepDaze(nn.Module):
         if not return_loss:
             return out
 
-        pieces = []
+        # sample cutout sizes between lower and upper bound
         width = out.shape[-1]
-        size_slice = slice(self.num_batches_processed, self.num_batches_processed + self.batch_size)
+        lower_bound = self.lower_bound_cutout
+        if self.saturate_bound:
+            progress_fraction = self.num_batches_processed / self.total_batches
+            lower_bound += (self.saturate_limit - self.lower_bound_cutout) * progress_fraction
+            
+        lower = lower_bound * width
+        upper = self.upper_bound_cutout * width
+        sizes = torch.randint(int(lower), int(upper), (self.batch_size,))
 
-        for size in self.scheduled_sizes[size_slice]:
-            apper = rand_cutout(out, size)
-            apper = interpolate(apper, 224)
-            pieces.append(normalize_image(apper))
-
-        image = torch.cat(pieces)
-
+        # create normalized random cutouts
+        image_pieces = torch.cat([normalize_image(interpolate(rand_cutout(out, size), 224)) for size in sizes])
+        # calc image embedding
         with autocast(enabled=False):
-            image_embed = perceptor.encode_image(image)
-
+            image_embed = perceptor.encode_image(image_pieces)
+        # count batches
         if not dry_run:
             self.num_batches_processed += self.batch_size
-
+        # calc loss
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
         return out, loss
-
-    def generate_size_schedule(self):
-        batches = 0
-        counter = 0
-        self.scheduled_sizes = []
-
-        while batches <= self.total_batches:
-            counter += 1
-            sizes = self.sample_sizes(counter)
-            batches += len(sizes)
-            self.scheduled_sizes.extend(sizes)
-
-    def sample_sizes(self, counter):
-        pieces_per_group = 4
-
-        # 6 piece schedule increasing in context as model saturates
-        if counter < 500:
-            partition = [4, 5, 3, 2, 1, 1]
-        elif counter < 1000:
-            partition = [2, 5, 4, 2, 2, 1]
-        elif counter < 1500:
-            partition = [1, 4, 5, 3, 2, 1]
-        elif counter < 2000:
-            partition = [1, 3, 4, 4, 2, 2]
-        elif counter < 2500:
-            partition = [1, 2, 2, 4, 4, 3]
-        elif counter < 3000:
-            partition = [1, 1, 2, 3, 4, 5]
-        else:
-            partition = [1, 1, 1, 2, 4, 7]
-
-        dbase = .38
-        step = .1
-        width = self.image_width
-
-        sizes = []
-        for part_index in range(len(partition)):
-            groups = partition[part_index]
-            for _ in range(groups * pieces_per_group):
-                sizes.append(torch.randint(
-                    int((dbase + step * part_index + .01) * width),
-                    int((dbase + step * (1 + part_index)) * width), ()))
-
-        sizes.sort()
-        return sizes
-
-
-    
-def create_text_path(text=None, img=None, encoding=None):
-    if text is not None:
-        input_name = text.replace(" ", "_")[:perceptor.context_length]
-    elif img is not None:
-        if isinstance(img, str):
-            input_name = "".join(img.replace(" ", "_").split(".")[:-1])
-        else:
-            input_name = "PIL_img"
-    else:
-        input_name = "your_encoding"
-    return input_name
 
 
 class Imagine(nn.Module):
@@ -237,7 +202,6 @@ class Imagine(nn.Module):
             text=None,
             img=None,
             clip_encoding=None,
-            create_story=False,
             lr=1e-5,
             batch_size=4,
             gradient_accumulate_every=4,
@@ -255,6 +219,12 @@ class Imagine(nn.Module):
             start_image_lr=3e-4,
             theta_initial=None,
             theta_hidden=None,
+            lower_bound_cutout=0.1, # should be smaller than 0.8
+            upper_bound_cutout=1.0,
+            saturate_bound=False,
+            create_story=False,
+            story_start_words=5,
+            story_words_per_epoch=5,
     ):
 
         super().__init__()
@@ -270,8 +240,8 @@ class Imagine(nn.Module):
         self.create_story = create_story
         self.words = None
         self.all_words = text.split(" ") if text is not None else None
-        self.num_start_words = 3
-        self.words_per_epoch = 3
+        self.num_start_words = story_start_words
+        self.words_per_epoch = story_words_per_epoch
         if create_story:
             assert text is not None,  "We need text input to create a story..."
             # overwrite epochs to match story length
@@ -292,7 +262,10 @@ class Imagine(nn.Module):
             image_width=image_width,
             num_layers=num_layers,
             theta_initial=theta_initial,
-            theta_hidden=theta_hidden
+            theta_hidden=theta_hidden,
+            lower_bound_cutout=lower_bound_cutout,
+            upper_bound_cutout=upper_bound_cutout,
+            saturate_bound=saturate_bound,
         ).cuda()
 
         self.model = model
@@ -320,14 +293,7 @@ class Imagine(nn.Module):
             assert file.exists(), f'file does not exist at given starting image path {self.start_image_path}'
             image = Image.open(str(file))
 
-            transform = T.Compose([
-                T.Resize(image_width),
-                T.CenterCrop((image_width, image_width)),
-                T.ToTensor(),
-                T.Normalize(0.5, 0.5)
-            ])
-
-            image_tensor = transform(image)[None, ...].cuda()
+            image_tensor = self.clip_img_transform(image)[None, ...].cuda()
             self.start_image = image_tensor
             
     def create_clip_encoding(self, text=None, img=None, encoding=None):
@@ -404,7 +370,7 @@ class Imagine(nn.Module):
         if self.save_date_time:
             current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f")
             output_path = f"{current_time}_{output_path}"
-        return Path(f"{output_path}.png")
+        return Path(f"{output_path}.jpg")
 
     def train_step(self, epoch, iteration):
         total_loss = 0
@@ -414,8 +380,7 @@ class Imagine(nn.Module):
                 out, loss = self.model(self.clip_encoding)
             loss = loss / self.gradient_accumulate_every
             total_loss += loss
-            self.scaler.scale(loss).backward()
-
+            self.scaler.scale(loss).backward()    
         out = out.cpu().float().clamp(0., 1.)
         self.scaler.step(self.optimizer)
         self.scaler.update()
@@ -436,11 +401,14 @@ class Imagine(nn.Module):
         sequence_number = self.get_img_sequence_number(epoch, iteration)
 
         if img is None:
-            #img = normalize_image(self.model(self.clip_encoding, return_loss=False).cpu().float()).clamp(0., 1.)
             img = self.model(self.clip_encoding, return_loss=False).cpu().float().clamp(0., 1.)
         self.filename = self.image_output_path(sequence_number=sequence_number)
-        save_image(img, self.filename)
-        save_image(img, f"{self.textpath}.png")
+        
+        pil_img = T.ToPILImage()(img.squeeze())
+        pil_img.save(self.filename, quality=95, subsampling=0)
+        pil_img.save(f"{self.textpath}.jpg", quality=95, subsampling=0)
+        #save_image(img, self.filename)
+        #save_image(img, f"{self.textpath}.png")
 
         tqdm.write(f'image updated at "./{str(self.filename)}"')
 
@@ -486,4 +454,4 @@ class Imagine(nn.Module):
             if self.create_story:
                 self.clip_encoding = self.update_story_encoding(epoch, i)
 
-        self.save_image(self.epochs, self.iterations) # one final save at end
+        self.save_image(epoch, i) # one final save at end
