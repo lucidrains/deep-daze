@@ -1,28 +1,36 @@
 ## Deep Daze
 
-<img src="./samples/mist-over-green-hills.png" width="200px"></img>
+<img src="./samples/Mist_over_green_hills.jpg" width="256px"></img>
 
 *mist over green hills*
 
-<img src="./samples/shattered-plates.png" width="200px"></img>
+<img src="./samples/Shattered_plates_on_the_grass.jpg" width="256px"></img>
 
 *shattered plates on the grass*
 
-<img src="./samples/cosmic-love.png" width="200px"></img>
+<img src="./samples/Cosmic_love_and_attention.jpg" width="256px"></img>
 
 *cosmic love and attention*
 
-<img src="./samples/time-traveler.png" width="200px"></img>
+<img src="./samples/A_time_traveler_in_the_crowd.jpg" width="256px"></img>
 
 *a time traveler in the crowd*
 
-<img src="./samples/life-plague.png" width="200px"></img>
+<img src="./samples/Life_during_the_plague.jpg" width="256px"></img>
 
 *life during the plague*
 
-<img src="./samples/peace-sunlit-forest.png" width="200px"></img>
+<img src="./samples/Meditative_peace_in_a_sunlit_forest.jpg" width="256px"></img>
 
 *meditative peace in a sunlit forest*
+
+<img src="./samples/A_man_painting_a_completely_red_image.png" width="256px"></img>
+
+*a man painting a completely red image*
+
+<img src="./samples/A_psychedelic_experience_on_LSD.png" width="256px"></img>
+
+*a psychedelic experience on LSD*
 
 ## What is this?
 
@@ -81,6 +89,30 @@ POSITIONAL ARGUMENTS
         (required) A phrase less than 77 characters which you would like to visualize.
 
 FLAGS
+    --img=IMAGE_PATH
+        Default: None
+        Path to png/jpg image or PIL image to optimize on
+    --encoding=ENCODING
+        Default: None
+        User-created custom CLIP encoding. If used, replaces any text or image that was used.
+    --create_story=CREATE_STORY
+        Default: False
+        Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
+    --story_start_words=STORY_START_WORDS
+        Default: 5
+        Only used if create_story is True. How many words to optimize on for the first epoch.
+    --story_words_per_epoch=STORY_WORDS_PER_EPOCH
+        Default: 5
+        Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    --lower_bound_cutout=LOWER_BOUND_CUTOUT
+        Default: 0.1
+        Lower bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should be smaller than 0.8.
+    --upper_bound_cutout=UPPER_BOUND_CUTOUT
+        Default: 1.0
+        Upper bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should probably stay at 1.0.
+    --saturate_bound=SATURATE_BOUND
+        Default: False
+        If True, the LOWER_BOUND_CUTOUT is linearly increased to 0.75 during training.
     --learning_rate=LEARNING_RATE
         Default: 1e-05
         The learning rate of the neural net.
@@ -152,9 +184,53 @@ Primed starting image
 
 <img src="./samples/prime-orig.jpg" width="256px"></img>
 
-Then trained with the prompt `A pizza with green peppers`
+Then trained with the prompt `A pizza with green pepper.`
 
 <img src="./samples/prime-trained.png" width="256px"></img>
+
+
+### Optimize for the interpretation of an image
+
+We can also feed in an image as an optimization goal, instead of only priming the generator network. Deepdaze will then render its own interpretation of that image:
+```bash
+$ imagine --img samples/Autumn_1875_Frederic_Edwin_Church.jpg
+```
+Original image:
+
+<img src="./samples/Autumn_1875_Frederic_Edwin_Church_original.jpg" width="256px"></img>
+
+The network's interpretation:  
+
+<img src="./samples/Autumn_1875_Frederic_Edwin_Church.jpg" width="256px"></img>
+
+Original image:
+
+<img src="./samples/hot-dog.jpg" width="256px"></img>
+
+The network's interpretation:  
+
+<img src="./samples/hot-dog_imagined.png" width="256px"></img>
+
+#### Optimize for text and image combined
+
+```bash
+$ imagine "A psychedelic experience." --img samples/hot-dog.jpg
+```
+The network's interpretation:  
+<img src="./samples/psychedelic_hot_dog.png" width="256px"></img>
+
+
+### New: Create a story
+The regular mode for texts only allows 77 characters. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`.
+
+Given the poem “Stopping by Woods On a Snowy Evening” by Robert Frost - 
+"Whose woods these are I think I know. His house is in the village though; He will not see me stopping here To watch his woods fill up with snow. My little horse must think it queer To stop without a farmhouse near Between the woods and frozen lake The darkest evening of the year. He gives his harness bells a shake To ask if there is some mistake. The only other sound’s the sweep Of easy wind and downy flake. The woods are lovely, dark and deep, But I have promises to keep, And miles to go before I sleep, And miles to go before I sleep.".
+
+We get:
+
+https://user-images.githubusercontent.com/19983153/109539633-d671ef80-7ac1-11eb-8d8c-380332d7c868.mp4
+
+
 
 ### Python
 #### Invoke `deep_daze.Imagine` in Python
@@ -223,6 +299,26 @@ imagine = Imagine(
     gradient_accumulate_every=16 # Increase gradient_accumulate_every to correct for loss in low batch sizes
 )
 ```
+
+### VRAM and speed benchmarks:
+These experiments were conducted with a 2060 Super RTX and a 3700X Ryzen 5. We first mention the parameters (bs = batch size), then the memory usage and in some cases the training iterations per second:
+
+For an image resolution of 512: 
+* bs 1,  num_layers 22: 7.96 GB
+* bs 2,  num_layers 20: 7.5 GB
+* bs 16, num_layers 16: 6.5 GB
+
+For an image resolution of 256:
+* bs 8, num_layers 48: 5.3 GB
+* bs 16, num_layers 48: 5.46 GB - 2.0 it/s
+* bs 32, num_layers 48: 5.92 GB - 1.67 it/s
+* bs 8, num_layers 44: 5 GB - 2.39 it/s
+* bs 32, num_layers 44, grad_acc 1: 5.62 GB - 4.83 it/s
+* bs 96, num_layers 44, grad_acc 1: 7.51 GB - 2.77 it/s
+* bs 32, num_layers 66, grad_acc 1: 7.09 GB - 3.7 it/s
+    
+@NotNANtoN recommends a batch size of 32 with 44 layers and training 1-8 epochs.
+
 
 ## Where is this going?
 

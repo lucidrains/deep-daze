@@ -16,7 +16,7 @@ setup(
   version = __version__,
   license='MIT',
   description = 'Deep Daze',
-  author = 'Phil Wang',
+  author = 'Ryan Murdock, Phil Wang',
   author_email = 'lucidrains@gmail.com',
   url = 'https://github.com/lucidrains/deep-daze',
   keywords = [
