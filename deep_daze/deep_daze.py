@@ -128,6 +128,7 @@ class DeepDaze(nn.Module):
             lower_bound_cutout=0.1, # should be smaller than 0.8
             upper_bound_cutout=1.0,
             saturate_bound=False,
+            avg_feats=False,
     ):
         super().__init__()
         # load clip
@@ -162,7 +163,7 @@ class DeepDaze(nn.Module):
         self.saturate_limit = 0.75 # cutouts above this value lead to destabilization
         self.lower_bound_cutout = lower_bound_cutout
         self.upper_bound_cutout = upper_bound_cutout
-
+        self.avg_feats = avg_feats
 
     def forward(self, text_embed, return_loss=True, dry_run=False):
         out = self.model()
@@ -171,22 +172,59 @@ class DeepDaze(nn.Module):
         if not return_loss:
             return out
 
-        # sample cutout sizes between lower and upper bound
-        width = out.shape[-1]
-        lower_bound = self.lower_bound_cutout
-        if self.saturate_bound:
-            progress_fraction = self.num_batches_processed / self.total_batches
-            lower_bound += (self.saturate_limit - self.lower_bound_cutout) * progress_fraction
-            
-        lower = lower_bound * width
-        upper = self.upper_bound_cutout * width
-        sizes = torch.randint(int(lower), int(upper), (self.batch_size,))
+        do_cutouts = True
+        gauss_noise = False
+        gauss_mean = 0.6
+        gauss_std =  0.25
+        
+        do_noise = False
+        std = 0.1
+        
+        # TODO: sample N sizes, then average features of M samples per size. Could be interesting
+        
+        if do_cutouts:
+            # sample cutout sizes between lower and upper bound
+            width = out.shape[-1]
+            lower_bound = self.lower_bound_cutout
+            if self.saturate_bound:
+                progress_fraction = self.num_batches_processed / self.total_batches
+                lower_bound += (self.saturate_limit - self.lower_bound_cutout) * progress_fraction
 
-        # create normalized random cutouts
-        image_pieces = torch.cat([normalize_image(interpolate(rand_cutout(out, size), 224)) for size in sizes])
+            lower = int(lower_bound * width)
+            upper = int(self.upper_bound_cutout * width)
+            
+            if gauss_noise:
+                gauss_samples = torch.zeros(self.batch_size).normal_(mean=gauss_mean, std=gauss_std)
+                too_large_mask = gauss_samples >= self.upper_bound_cutout
+                gauss_samples[too_large_mask] = torch.zeros((len(gauss_samples[too_large_mask]),)).uniform_(lower_bound, self.upper_bound_cutout)
+                too_small_mask = gauss_samples <= self.lower_bound_cutout
+                gauss_samples[too_small_mask] = torch.zeros((len(gauss_samples[too_small_mask]),)).uniform_(lower_bound, self.upper_bound_cutout)
+                #gauss_samples = gauss_samples.clamp(self.lower_bound_cutout, self.upper_bound_cutout - 0.01)
+                sizes = [int(sample * width) for sample in gauss_samples]
+            else:
+                sizes = torch.randint(int(lower), int(upper), (self.batch_size,))
+
+            # create normalized random cutouts
+            image_pieces = [rand_cutout(out, size) for size in sizes]
+        else:
+            image_pieces = [out]
+        
+        if do_noise:
+            noise_vectors = [torch.zeros_like(out).normal_(mean=0.0, std=std) for _ in range(self.batch_size)]
+            noisy_imgs = [interpolate(out + noise, 224) for noise in noise_vectors]
+            os.makedirs("debug", exist_ok=True)
+            T.ToPILImage()(interpolate(out, 224).squeeze()).save("debug/out_img.jpg")
+            T.ToPILImage()(noisy_imgs[0].squeeze()).save("debug/noisy_img_0.jpg")
+            image_pieces = noisy_imgs
+            
         # calc image embedding
+        image_pieces = torch.cat([normalize_image(interpolate(piece, 224)) for piece in image_pieces])
         with autocast(enabled=False):
             image_embed = perceptor.encode_image(image_pieces)
+            
+        if self.avg_feats:
+            image_embed = image_embed.mean(dim=0).unsqueeze(0)
+            
         # count batches
         if not dry_run:
             self.num_batches_processed += self.batch_size
@@ -222,6 +260,7 @@ class Imagine(nn.Module):
             lower_bound_cutout=0.1, # should be smaller than 0.8
             upper_bound_cutout=1.0,
             saturate_bound=False,
+            avg_feats=False,
             create_story=False,
             story_start_words=5,
             story_words_per_epoch=5,
@@ -266,6 +305,7 @@ class Imagine(nn.Module):
             lower_bound_cutout=lower_bound_cutout,
             upper_bound_cutout=upper_bound_cutout,
             saturate_bound=saturate_bound,
+            avg_feats=avg_feats,
         ).cuda()
 
         self.model = model
