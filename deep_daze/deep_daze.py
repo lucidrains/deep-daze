@@ -60,6 +60,15 @@ def rand_cutout(image, size):
     return cutout
 
 
+def rand_occlusion(image, size):
+    image = image.copy()
+    width = image.shape[-1]
+    offsetx = torch.randint(0, width - size, ())
+    offsety = torch.randint(0, width - size, ())
+    image[:, :, offsetx:offsetx + size, offsety:offsety + size] = 0
+    return image
+
+
 def open_folder(path):
     if os.path.isfile(path):
         path = os.path.dirname(path)
@@ -129,6 +138,7 @@ class DeepDaze(nn.Module):
             upper_bound_cutout=1.0,
             saturate_bound=False,
             avg_feats=False,
+            do_occlusion=False,
     ):
         super().__init__()
         # load clip
@@ -164,6 +174,7 @@ class DeepDaze(nn.Module):
         self.lower_bound_cutout = lower_bound_cutout
         self.upper_bound_cutout = upper_bound_cutout
         self.avg_feats = avg_feats
+        self.do_occlusion = do_occlusion
 
     def forward(self, text_embed, return_loss=True, dry_run=False):
         out = self.model()
@@ -205,7 +216,10 @@ class DeepDaze(nn.Module):
                 sizes = torch.randint(int(lower), int(upper), (self.batch_size,))
 
             # create normalized random cutouts
-            image_pieces = [rand_cutout(out, size) for size in sizes]
+            if self.do_occlusion:
+                image_piecies = [rand_occlusion(out, size) for size in sizes]
+            else:   
+                image_pieces = [rand_cutout(out, size) for size in sizes]
         else:
             image_pieces = [out]
         
@@ -261,6 +275,8 @@ class Imagine(nn.Module):
             upper_bound_cutout=1.0,
             saturate_bound=False,
             avg_feats=False,
+            do_occlusion=False,
+
             create_story=False,
             story_start_words=5,
             story_words_per_epoch=5,
