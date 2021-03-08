@@ -13,6 +13,7 @@ from siren_pytorch import SirenNet, SirenWrapper
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch_optimizer import DiffGrad, AdamP
+import numpy as np
 
 from PIL import Image
 import torchvision.transforms as T
@@ -52,19 +53,32 @@ def interpolate(image, size):
     return F.interpolate(image, (size, size), mode='bilinear', align_corners=False)
 
 
-def rand_cutout(image, size):
+def rand_cutout(image, size, center_bias=False):
     width = image.shape[-1]
-    offsetx = torch.randint(0, width - size, ())
-    offsety = torch.randint(0, width - size, ())
-    cutout = image[:, :, offsetx:offsetx + size, offsety:offsety + size]
+    min_offset = 0
+    max_offset = width - size
+    if center_bias:
+        # sample around image center
+        center = width / 2
+        std = center / 2
+        offset_x = int(random.gauss(mu=center, sigma=std))
+        offset_y = int(random.gauss(mu=center, sigma=std))
+        # resample uniformly if over boundaries
+        offset_x = random.randint(min_offset, max_offset) if (offset_x > max_offset or offset_x < min_offset) else offset_x
+        offset_y = random.randint(min_offset, max_offset) if (offset_y > max_offset or offset_y < min_offset) else offset_y
+    else:
+        offset_x = random.randint(min_offset, max_offset)
+        offset_y = random.randint(min_offset, max_offset)
+    cutout = image[:, :, offset_x:offset_x + size, offset_y:offset_y + size]
     return cutout
 
 
 def rand_occlusion(image, size):
-    image = image.copy()
+    # TODO: add corner bias
+    image = image.clone()
     width = image.shape[-1]
-    offsetx = torch.randint(0, width - size, ())
-    offsety = torch.randint(0, width - size, ())
+    offsetx = random.randint(0, width - size)
+    offsety = random.randint(0, width - size)
     image[:, :, offsetx:offsetx + size, offsety:offsety + size] = 0
     return image
 
@@ -139,6 +153,14 @@ class DeepDaze(nn.Module):
             saturate_bound=False,
             avg_feats=False,
             do_occlusion=False,
+            gauss_sampling=False,
+            gauss_mean=0.6,
+            gauss_std=0.2,
+            average_over_noise=False,
+            noise_std=0.01,
+            noise_n=3,
+            do_cutout=True,
+            center_bias=False,
     ):
         super().__init__()
         # load clip
@@ -175,6 +197,26 @@ class DeepDaze(nn.Module):
         self.upper_bound_cutout = upper_bound_cutout
         self.avg_feats = avg_feats
         self.do_occlusion = do_occlusion
+        self.gauss_sampling = gauss_sampling
+        self.gauss_mean = gauss_mean
+        self.gauss_std = gauss_std
+        self.average_over_noise = average_over_noise
+        self.noise_std = noise_std
+        self.noise_n = noise_n
+        self.do_cutout = do_cutout
+        self.center_bias = center_bias
+        
+    def sample_sizes(self, lower, upper, width, gauss_mean):
+        if self.gauss_sampling:
+            gauss_samples = torch.zeros(self.batch_size).normal_(mean=gauss_mean, std=self.gauss_std)
+            outside_bounds_mask = (gauss_samples > upper) | (gauss_samples < upper)
+            gauss_samples[outside_bounds_mask] = torch.zeros((len(gauss_samples[outside_bounds_mask]),)).uniform_(lower, upper)
+            sizes = (gauss_samples * width).int()
+        else:
+            lower *= width
+            upper *= width
+            sizes = torch.randint(int(lower), int(upper), (self.batch_size,))
+        return sizes
 
     def forward(self, text_embed, return_loss=True, dry_run=False):
         out = self.model()
@@ -182,59 +224,48 @@ class DeepDaze(nn.Module):
 
         if not return_loss:
             return out
-
-        do_cutouts = True
-        gauss_noise = False
-        gauss_mean = 0.6
-        gauss_std =  0.25
-        
-        do_noise = False
-        std = 0.1
         
         # TODO: sample N sizes, then average features of M samples per size. Could be interesting
         
-        if do_cutouts:
-            # sample cutout sizes between lower and upper bound
-            width = out.shape[-1]
-            lower_bound = self.lower_bound_cutout
-            if self.saturate_bound:
-                progress_fraction = self.num_batches_processed / self.total_batches
-                lower_bound += (self.saturate_limit - self.lower_bound_cutout) * progress_fraction
+        # determine upper and lower sampling bound
+        width = out.shape[-1]
+        lower_bound = self.lower_bound_cutout
+        if self.saturate_bound:
+            progress_fraction = self.num_batches_processed / self.total_batches
+            lower_bound += (self.saturate_limit - self.lower_bound_cutout) * progress_fraction
 
-            lower = int(lower_bound * width)
-            upper = int(self.upper_bound_cutout * width)
-            
-            if gauss_noise:
-                gauss_samples = torch.zeros(self.batch_size).normal_(mean=gauss_mean, std=gauss_std)
-                too_large_mask = gauss_samples >= self.upper_bound_cutout
-                gauss_samples[too_large_mask] = torch.zeros((len(gauss_samples[too_large_mask]),)).uniform_(lower_bound, self.upper_bound_cutout)
-                too_small_mask = gauss_samples <= self.lower_bound_cutout
-                gauss_samples[too_small_mask] = torch.zeros((len(gauss_samples[too_small_mask]),)).uniform_(lower_bound, self.upper_bound_cutout)
-                #gauss_samples = gauss_samples.clamp(self.lower_bound_cutout, self.upper_bound_cutout - 0.01)
-                sizes = [int(sample * width) for sample in gauss_samples]
-            else:
-                sizes = torch.randint(int(lower), int(upper), (self.batch_size,))
+        # sample cutout sizes between lower and upper bound
+        sizes = self.sample_sizes(lower_bound, self.upper_bound_cutout, width, self.gauss_mean)
 
-            # create normalized random cutouts
-            if self.do_occlusion:
-                image_piecies = [rand_occlusion(out, size) for size in sizes]
-            else:   
-                image_pieces = [rand_cutout(out, size) for size in sizes]
+        # create normalized random cutouts/occlusions
+        if self.do_cutout:   
+            image_pieces = [rand_cutout(out, size, center_bias=self.center_bias) for size in sizes]
+            image_pieces = [interpolate(piece, 224) for piece in image_pieces]
         else:
-            image_pieces = [out]
-        
-        if do_noise:
-            noise_vectors = [torch.zeros_like(out).normal_(mean=0.0, std=std) for _ in range(self.batch_size)]
-            noisy_imgs = [interpolate(out + noise, 224) for noise in noise_vectors]
-            os.makedirs("debug", exist_ok=True)
-            T.ToPILImage()(interpolate(out, 224).squeeze()).save("debug/out_img.jpg")
-            T.ToPILImage()(noisy_imgs[0].squeeze()).save("debug/noisy_img_0.jpg")
-            image_pieces = noisy_imgs
-            
-        # calc image embedding
-        image_pieces = torch.cat([normalize_image(interpolate(piece, 224)) for piece in image_pieces])
-        with autocast(enabled=False):
-            image_embed = perceptor.encode_image(image_pieces)
+            image_pieces = [out.clone() for _ in sizes]
+
+        if self.do_occlusion:                
+            # resample sizes
+            downscale_factor = 3
+            lower = lower_bound / downscale_factor
+            upper = self.upper_bound_cutout / downscale_factor
+            gauss_mean = self.gauss_mean / downscale_factor
+            sizes = self.sample_sizes(lower, upper, width, gauss_mean)
+            image_pieces = [rand_occlusion(piece, size) for piece, size in zip(image_pieces, sizes)]
+
+        # normalize
+        image_pieces = torch.cat([normalize_image(piece) for piece in image_pieces])
+
+        if self.average_over_noise:
+            # do image embedding calculation here to not inflate the batch size
+            noisy_batches = [image_pieces + torch.zeros_like(image_pieces).normal_(mean=0.0, std=self.noise_std) for _ in range(self.noise_n)]
+            with autocast(enabled=False):
+                noisy_feats = [perceptor.encode_image(batch) for batch in noisy_batches]
+            image_embed = torch.cat(noisy_feats)
+        else:
+            # calc image embedding
+            with autocast(enabled=False):
+                image_embed = perceptor.encode_image(image_pieces)
             
         if self.avg_feats:
             image_embed = image_embed.mean(dim=0).unsqueeze(0)
@@ -280,6 +311,15 @@ class Imagine(nn.Module):
             create_story=False,
             story_start_words=5,
             story_words_per_epoch=5,
+        
+            gauss_sampling = False,
+            gauss_mean = 0.6,
+            gauss_std = 0.2,
+            average_over_noise = False,
+            noise_std = 0.01,
+            noise_n = 3,
+            do_cutout = True,
+            center_bias=False,
     ):
 
         super().__init__()
@@ -322,7 +362,16 @@ class Imagine(nn.Module):
             upper_bound_cutout=upper_bound_cutout,
             saturate_bound=saturate_bound,
             avg_feats=avg_feats,
-        ).cuda()
+            do_occlusion=do_occlusion,
+            gauss_sampling=gauss_sampling,
+            gauss_mean=gauss_mean,
+            gauss_std=gauss_std,
+            average_over_noise=average_over_noise,
+            noise_std=noise_std,
+            noise_n=noise_n,
+            do_cutout=do_cutout,
+            center_bias=center_bias,
+            ).cuda()
 
         self.model = model
         self.scaler = GradScaler()
