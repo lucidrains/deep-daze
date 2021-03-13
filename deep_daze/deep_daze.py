@@ -36,7 +36,7 @@ def signal_handling(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handling)
 
-perceptor, normalize_image = load()
+perceptor, normalize_image = load('ViT-B/32', jit = False)
 
 # Helpers
 
