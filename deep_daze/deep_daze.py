@@ -282,7 +282,7 @@ class Imagine(nn.Module):
         self.filename = self.image_output_path()
         
         # create coding to optimize for
-        self.clip_img_transform = create_clip_img_transform(perceptor.input_resolution.item())
+        self.clip_img_transform = create_clip_img_transform(224)
         self.clip_encoding = self.create_clip_encoding(text=text, img=img, encoding=clip_encoding)
 
         self.start_image = None
