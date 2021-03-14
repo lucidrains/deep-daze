@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import copy
 
-import torch
+import fire
 import torch.nn.functional as F
 from siren_pytorch import SirenNet, SirenWrapper
 from torch import nn
