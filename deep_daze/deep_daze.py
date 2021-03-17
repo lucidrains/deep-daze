@@ -74,7 +74,7 @@ def open_folder(path):
         cmd_list = ['xdg-open', path]
     elif sys.platform in ['win32', 'win64']:
         cmd_list = ['explorer', path.replace('/', '\\')]
-    if cmd_list == None:
+    if cmd_list is None:
         return
 
     try:
