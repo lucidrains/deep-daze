@@ -11,10 +11,7 @@ import os
 import urllib
 import warnings
 from typing import Union, List
-
-import torch
-from PIL import Image
-from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+from torchvision.transforms import Compose, Normalize
 from tqdm import tqdm
 
 _MODELS = {
@@ -613,9 +610,7 @@ def build_model(state_dict: dict):
     model.load_state_dict(state_dict)
     return model.eval()
 
-import gzip
 import html
-import os
 from functools import lru_cache
 
 import ftfy
