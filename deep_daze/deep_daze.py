@@ -5,8 +5,6 @@ import sys
 import random
 from datetime import datetime
 from pathlib import Path
-from shutil import copy
-
 import torch
 import torch.nn.functional as F
 from siren_pytorch import SirenNet, SirenWrapper
@@ -16,7 +14,7 @@ from torch_optimizer import DiffGrad, AdamP
 
 from PIL import Image
 import torchvision.transforms as T
-from torchvision.utils import save_image
+#from torchvision.utils import save_image
 
 from tqdm import trange, tqdm
 
@@ -74,7 +72,7 @@ def open_folder(path):
         cmd_list = ['xdg-open', path]
     elif sys.platform in ['win32', 'win64']:
         cmd_list = ['explorer', path.replace('/', '\\')]
-    if cmd_list == None:
+    if cmd_list is None:
         return
 
     try:
