@@ -12,8 +12,11 @@ import torch
 from torchvision.transforms import Normalize
 from tqdm import tqdm
 
-MODEL_PATH = "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"
-
+MODEL_PATHS = {"RN50": "https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt",
+               "RN101": "https://openaipublic.azureedge.net/clip/models/8fa8567bab74a42d41c5915025a8e4538c3bdbe8804a470a72f30b0d94fab599/RN101.pt",
+               "RN50x4": "https://openaipublic.azureedge.net/clip/models/7e526bd135e493cef0776de27d5f42653e6b4c8bf9e0f653bb11773263205fdd/RN50x4.pt",
+               "ViT-B/32": "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt",
+               }
 
 @lru_cache()
 def default_bpe():
@@ -162,14 +165,14 @@ def _download(url, root=os.path.expanduser("~/.cache/clip")):
     return download_target
 
 
-def load():
+def load(model_name):
     """
     Downloads the existing CLIP model if necessary, finds and patches devices, then returns a torch model
     and a Normalize containing the mean and standard deviation of the CLIP training set.
     :rtype: tuple[Union[RecursiveScriptModule, RecursiveScriptModule], Normalize]
     """
     device = 'cuda'
-    model_path = _download(MODEL_PATH)
+    model_path = _download(MODEL_PATHS[model_name])
     model = torch.jit.load(model_path, map_location=device).eval()
     n_px = model.input_resolution.item()
 

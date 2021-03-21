@@ -5,7 +5,6 @@ import sys
 import random
 from datetime import datetime
 from pathlib import Path
-from shutil import copy
 
 import torch
 import torch.nn.functional as F
@@ -17,11 +16,10 @@ import numpy as np
 
 from PIL import Image
 import torchvision.transforms as T
-from torchvision.utils import save_image
 
 from tqdm import trange, tqdm
 
-from deep_daze.clip import load, tokenize
+from .clip import load, tokenize
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
 
@@ -37,8 +35,6 @@ def signal_handling(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handling)
 
-perceptor, normalize_image = load()
-
 # Helpers
 
 def exists(val):
@@ -53,14 +49,14 @@ def interpolate(image, size):
     return F.interpolate(image, (size, size), mode='bilinear', align_corners=False)
 
 
-def rand_cutout(image, size, center_bias=False):
+def rand_cutout(image, size, center_bias=False, center_focus=2):
     width = image.shape[-1]
     min_offset = 0
     max_offset = width - size
     if center_bias:
         # sample around image center
-        center = width / 2
-        std = center / 2
+        center = max_offset / 2
+        std = center / center_focus
         offset_x = int(random.gauss(mu=center, sigma=std))
         offset_y = int(random.gauss(mu=center, sigma=std))
         # resample uniformly if over boundaries
@@ -73,14 +69,17 @@ def rand_cutout(image, size, center_bias=False):
     return cutout
 
 
-def rand_occlusion(image, size):
-    # TODO: add corner bias
-    image = image.clone()
-    width = image.shape[-1]
-    offsetx = random.randint(0, width - size)
-    offsety = random.randint(0, width - size)
-    image[:, :, offsetx:offsetx + size, offsety:offsety + size] = 0
-    return image
+def create_clip_img_transform(image_width):
+    clip_mean = [0.48145466, 0.4578275, 0.40821073]
+    clip_std = [0.26862954, 0.26130258, 0.27577711]
+    transform = T.Compose([
+                    #T.ToPILImage(),
+                    T.Resize(image_width),
+                    T.CenterCrop((image_width, image_width)),
+                    T.ToTensor(),
+                    T.Normalize(mean=clip_mean, std=clip_std)
+            ])
+    return transform
 
 
 def open_folder(path):
@@ -112,22 +111,9 @@ def norm_siren_output(img):
     return ((img + 1) * 0.5).clamp(0.0, 1.0)
 
 
-def create_clip_img_transform(image_width):
-    clip_mean = [0.48145466, 0.4578275, 0.40821073]
-    clip_std = [0.26862954, 0.26130258, 0.27577711]
-    transform = T.Compose([
-                    #T.ToPILImage(),
-                    T.Resize(image_width),
-                    T.CenterCrop((image_width, image_width)),
-                    T.ToTensor(),
-                    T.Normalize(mean=clip_mean, std=clip_std)
-            ])
-    return transform
-
-
-def create_text_path(text=None, img=None, encoding=None):
+def create_text_path(context_length, text=None, img=None, encoding=None):
     if text is not None:
-        input_name = text.replace(" ", "_")[:perceptor.context_length]
+        input_name = text.replace(" ", "_")[:context_length]
     elif img is not None:
         if isinstance(img, str):
             input_name = "".join(img.replace(" ", "_").split(".")[:-1])
@@ -141,6 +127,8 @@ def create_text_path(text=None, img=None, encoding=None):
 class DeepDaze(nn.Module):
     def __init__(
             self,
+            clip_perceptor,
+            clip_norm,
             total_batches,
             batch_size,
             num_layers=8,
@@ -152,19 +140,20 @@ class DeepDaze(nn.Module):
             upper_bound_cutout=1.0,
             saturate_bound=False,
             avg_feats=False,
-            do_occlusion=False,
             gauss_sampling=False,
             gauss_mean=0.6,
             gauss_std=0.2,
-            average_over_noise=False,
-            noise_std=0.01,
-            noise_n=3,
             do_cutout=True,
             center_bias=False,
+            center_focus=2,
+            
     ):
         super().__init__()
         # load clip
-
+        self.perceptor = clip_perceptor
+        self.input_resolution = self.perceptor[0].input_resolution.item()
+        self.normalize_image = clip_norm
+        
         self.loss_coef = loss_coef
         self.image_width = image_width
 
@@ -196,15 +185,12 @@ class DeepDaze(nn.Module):
         self.lower_bound_cutout = lower_bound_cutout
         self.upper_bound_cutout = upper_bound_cutout
         self.avg_feats = avg_feats
-        self.do_occlusion = do_occlusion
         self.gauss_sampling = gauss_sampling
         self.gauss_mean = gauss_mean
         self.gauss_std = gauss_std
-        self.average_over_noise = average_over_noise
-        self.noise_std = noise_std
-        self.noise_n = noise_n
         self.do_cutout = do_cutout
         self.center_bias = center_bias
+        self.center_focus = center_focus
         
     def sample_sizes(self, lower, upper, width, gauss_mean):
         if self.gauss_sampling:
@@ -224,9 +210,7 @@ class DeepDaze(nn.Module):
 
         if not return_loss:
             return out
-        
-        # TODO: sample N sizes, then average features of M samples per size. Could be interesting
-        
+                
         # determine upper and lower sampling bound
         width = out.shape[-1]
         lower_bound = self.lower_bound_cutout
@@ -237,35 +221,19 @@ class DeepDaze(nn.Module):
         # sample cutout sizes between lower and upper bound
         sizes = self.sample_sizes(lower_bound, self.upper_bound_cutout, width, self.gauss_mean)
 
-        # create normalized random cutouts/occlusions
+        # create normalized random cutouts
         if self.do_cutout:   
-            image_pieces = [rand_cutout(out, size, center_bias=self.center_bias) for size in sizes]
-            image_pieces = [interpolate(piece, 224) for piece in image_pieces]
+            image_pieces = [rand_cutout(out, size, center_bias=self.center_bias, center_focus=self.center_focus) for size in sizes]
+            image_pieces = [interpolate(piece, self.input_resolution) for piece in image_pieces]
         else:
-            image_pieces = [out.clone() for _ in sizes]
-
-        if self.do_occlusion:                
-            # resample sizes
-            downscale_factor = 3
-            lower = lower_bound / downscale_factor
-            upper = self.upper_bound_cutout / downscale_factor
-            gauss_mean = self.gauss_mean / downscale_factor
-            sizes = self.sample_sizes(lower, upper, width, gauss_mean)
-            image_pieces = [rand_occlusion(piece, size) for piece, size in zip(image_pieces, sizes)]
+            image_pieces = [interpolate(out.clone(), self.input_resolution) for _ in sizes]
 
         # normalize
-        image_pieces = torch.cat([normalize_image(piece) for piece in image_pieces])
-
-        if self.average_over_noise:
-            # do image embedding calculation here to not inflate the batch size
-            noisy_batches = [image_pieces + torch.zeros_like(image_pieces).normal_(mean=0.0, std=self.noise_std) for _ in range(self.noise_n)]
-            with autocast(enabled=False):
-                noisy_feats = [perceptor.encode_image(batch) for batch in noisy_batches]
-            image_embed = torch.cat(noisy_feats)
-        else:
-            # calc image embedding
-            with autocast(enabled=False):
-                image_embed = perceptor.encode_image(image_pieces)
+        image_pieces = torch.cat([self.normalize_image(piece) for piece in image_pieces])
+        
+        # calc image embedding
+        with autocast(enabled=False):
+            image_embed = self.perceptor[0].encode_image(image_pieces)
             
         if self.avg_feats:
             image_embed = image_embed.mean(dim=0).unsqueeze(0)
@@ -275,6 +243,7 @@ class DeepDaze(nn.Module):
             self.num_batches_processed += self.batch_size
         # calc loss
         loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
+        
         return out, loss
 
 
@@ -302,24 +271,23 @@ class Imagine(nn.Module):
             start_image_lr=3e-4,
             theta_initial=None,
             theta_hidden=None,
+            model_name="ViT-B/32",
             lower_bound_cutout=0.1, # should be smaller than 0.8
             upper_bound_cutout=1.0,
             saturate_bound=False,
             avg_feats=False,
-            do_occlusion=False,
 
             create_story=False,
             story_start_words=5,
             story_words_per_epoch=5,
         
-            gauss_sampling = False,
-            gauss_mean = 0.6,
-            gauss_std = 0.2,
-            average_over_noise = False,
-            noise_std = 0.01,
-            noise_n = 3,
-            do_cutout = True,
+            gauss_sampling=False,
+            gauss_mean=0.6,
+            gauss_std=0.2,
+            do_cutout=True,
             center_bias=False,
+            center_focus=2,
+            optimizer="AdamP",
     ):
 
         super().__init__()
@@ -347,35 +315,46 @@ class Imagine(nn.Module):
             print("Running for ", self.epochs, "epochs")
         else: 
             self.epochs = epochs
+        # Load CLIP
+        device = "cuda"
+        clip_perceptor, normalize_image = load(model_name)
+        self.perceptor = [clip_perceptor.eval()]
+        self.clip_transform = create_clip_img_transform(clip_perceptor.input_resolution.item())
         
         self.iterations = iterations
         self.image_width = image_width
         total_batches = self.epochs * self.iterations * batch_size * gradient_accumulate_every
         model = DeepDaze(
-            total_batches=total_batches,
-            batch_size=batch_size,
-            image_width=image_width,
-            num_layers=num_layers,
-            theta_initial=theta_initial,
-            theta_hidden=theta_hidden,
-            lower_bound_cutout=lower_bound_cutout,
-            upper_bound_cutout=upper_bound_cutout,
-            saturate_bound=saturate_bound,
-            avg_feats=avg_feats,
-            do_occlusion=do_occlusion,
-            gauss_sampling=gauss_sampling,
-            gauss_mean=gauss_mean,
-            gauss_std=gauss_std,
-            average_over_noise=average_over_noise,
-            noise_std=noise_std,
-            noise_n=noise_n,
-            do_cutout=do_cutout,
-            center_bias=center_bias,
+                self.perceptor,
+                normalize_image,
+                total_batches=total_batches,
+                batch_size=batch_size,
+                image_width=image_width,
+                num_layers=num_layers,
+                theta_initial=theta_initial,
+                theta_hidden=theta_hidden,
+                lower_bound_cutout=lower_bound_cutout,
+                upper_bound_cutout=upper_bound_cutout,
+                saturate_bound=saturate_bound,
+                avg_feats=avg_feats,
+                gauss_sampling=gauss_sampling,
+                gauss_mean=gauss_mean,
+                gauss_std=gauss_std,
+                average_over_noise=average_over_noise,
+                noise_std=noise_std,
+                noise_n=noise_n,
+                do_cutout=do_cutout,
+                center_bias=center_bias,
+                center_focus=center_focus,
             ).cuda()
-
         self.model = model
         self.scaler = GradScaler()
-        self.optimizer = AdamP(model.parameters(), lr)
+        if optimizer == "AdamP":
+            self.optimizer = AdamP(model.parameters(), lr)
+        elif optimizer == "Adam":
+            self.optimizer = torch.optim.Adam(model.parameters(), lr)
+        elif optimizer == "DiffGrad":
+            self.optimizer = DiffGrad(model.parameters(), lr)
         self.gradient_accumulate_every = gradient_accumulate_every
         self.save_every = save_every
         self.save_date_time = save_date_time
@@ -383,11 +362,10 @@ class Imagine(nn.Module):
         self.save_progress = save_progress
         self.text = text
         self.image = img
-        self.textpath = create_text_path(text=text, img=img, encoding=clip_encoding)
+        self.textpath = create_text_path(self.perceptor[0].context_length, text=text, img=img, encoding=clip_encoding)
         self.filename = self.image_output_path()
         
         # create coding to optimize for
-        self.clip_img_transform = create_clip_img_transform(perceptor.input_resolution.item())
         self.clip_encoding = self.create_clip_encoding(text=text, img=img, encoding=clip_encoding)
 
         self.start_image = None
@@ -397,8 +375,10 @@ class Imagine(nn.Module):
             file = Path(start_image_path)
             assert file.exists(), f'file does not exist at given starting image path {self.start_image_path}'
             image = Image.open(str(file))
-
-            image_tensor = self.clip_img_transform(image)[None, ...].cuda()
+            start_img_transform = T.Compose([T.Resize(image_width),
+                                             T.CenterCrop((image_width, image_width)),
+                                             T.ToTensor()])
+            image_tensor = start_img_transform(image).unsqueeze(0).cuda()
             self.start_image = image_tensor
             
     def create_clip_encoding(self, text=None, img=None, encoding=None):
@@ -419,15 +399,15 @@ class Imagine(nn.Module):
     def create_text_encoding(self, text):
         tokenized_text = tokenize(text).cuda()
         with torch.no_grad():
-            text_encoding = perceptor.encode_text(tokenized_text).detach()
+            text_encoding = self.perceptor[0].encode_text(tokenized_text).detach()
         return text_encoding
     
     def create_img_encoding(self, img):
         if isinstance(img, str):
             img = Image.open(img)
-        normed_img = self.clip_img_transform(img).unsqueeze(0).cuda()
+        normed_img = self.clip_transform(img).unsqueeze(0).cuda()
         with torch.no_grad():
-            img_encoding = perceptor.encode_image(normed_img).detach()
+            img_encoding = self.perceptor[0].encode_image(normed_img).detach()
         return img_encoding
     
     def set_clip_encoding(self, text=None, img=None, encoding=None):
@@ -448,7 +428,7 @@ class Imagine(nn.Module):
                 count += 1
                 # TODO: possibly do not increase count for stop-words and break if a "." is encountered.
             # remove words until it fits in context length
-            while len(self.words) > perceptor.context_length:
+            while len(self.words) > self.perceptor[0].context_length:
                 # remove first word
                 self.words = " ".join(self.words.split(" ")[1:])
         # get new encoding
@@ -481,7 +461,7 @@ class Imagine(nn.Module):
         total_loss = 0
 
         for _ in range(self.gradient_accumulate_every):
-            with autocast():
+            with autocast(enabled=True):
                 out, loss = self.model(self.clip_encoding)
             loss = loss / self.gradient_accumulate_every
             total_loss += loss
