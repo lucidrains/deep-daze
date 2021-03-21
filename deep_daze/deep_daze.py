@@ -17,6 +17,7 @@ import numpy as np
 from PIL import Image
 import torchvision.transforms as T
 
+
 from tqdm import trange, tqdm
 
 from .clip import load, tokenize
@@ -96,7 +97,7 @@ def open_folder(path):
         cmd_list = ['xdg-open', path]
     elif sys.platform in ['win32', 'win64']:
         cmd_list = ['explorer', path.replace('/', '\\')]
-    if cmd_list == None:
+    if cmd_list is None:
         return
 
     try:
