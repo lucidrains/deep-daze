@@ -149,8 +149,6 @@ class DeepDaze(nn.Module):
         super().__init__()
         # load clip
         self.perceptor = clip_perceptor
-        #self.input_resolution = 
-        #self.input_resolution = self.perceptor[0].input_resolution.item()
         self.input_resolution = input_res
         self.normalize_image = clip_norm
         
@@ -181,7 +179,7 @@ class DeepDaze(nn.Module):
         )
 
         self.saturate_bound = saturate_bound
-        self.saturate_limit = 0.75 # cutouts above this value lead to destabilization
+        self.saturate_limit = 0.75  # cutouts above this value lead to destabilization
         self.lower_bound_cutout = lower_bound_cutout
         self.upper_bound_cutout = upper_bound_cutout
         self.avg_feats = avg_feats
@@ -495,8 +493,6 @@ class Imagine(nn.Module):
         pil_img = T.ToPILImage()(img.squeeze())
         pil_img.save(self.filename, quality=95, subsampling=0)
         pil_img.save(f"{self.textpath}.jpg", quality=95, subsampling=0)
-        #save_image(img, self.filename)
-        #save_image(img, f"{self.textpath}.png")
 
         tqdm.write(f'image updated at "./{str(self.filename)}"')
 
