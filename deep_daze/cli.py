@@ -33,6 +33,14 @@ def train(
         create_story=False,
         story_start_words=5,
         story_words_per_epoch=5,
+        avg_feats=False,
+        gauss_sampling=False,
+        gauss_mean=0.6,
+        gauss_std=0.2,
+        do_cutout=True,
+        center_bias=False,
+        center_focus=2,
+        jit=True,
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -62,6 +70,14 @@ def train(
     :param create_story: Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
     :param story_start_words: Only used if create_story is True. How many words to optimize on for the first epoch.
     :param story_words_per_epoch: Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    :param avg_feats: If true, the mean clip features of the random cutouts of the optimized image are moved closer to the target encoding else the features of every individual cutout is moved towards the target encoding. Leads to the creation of more locally coherent scenes that represent a single concept of the target encoding,
+    :param gauss_sampling: Whether to use sampling from a Gaussian distribution instead of a uniform distribution,,
+    :param gauss_mean: The mean of the Gaussian sampling distribution,
+    :param gauss_std: The standard deviation of the Gaussian sampling distribution,
+    :param do_cutouts: Whether to use random cutouts as an augmentation. This basically needs to be turned on unless some new augmentations are added in code eventually,
+    :param center_bias: Whether to use a Gaussian distribution centered around the center of the image to sample the locations of random cutouts instead of a uniform distribution. Leads to the main generated objects to be more focused in the center,
+    :param center_focus: How much to focus on the center if using center_bias. std = sampling_range / center_focus. High values lead to a very correct representation in the center but washed out colors and details towards the edges,
+    :param jit: Whether to use the jit-compiled CLIP model. The jit model is faster.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -95,7 +111,15 @@ def train(
         saturate_bound=saturate_bound,
         create_story=create_story,
         story_start_words=story_start_words,
-        story_words_per_epoch=story_words_per_epoch
+        story_words_per_epoch=story_words_per_epoch,
+        avg_feats=avg_feats,
+        gauss_sampling=gauss_sampling,
+        gauss_mean=gauss_mean,
+        gauss_std=gauss_std,
+        do_cutout=do_cutout,
+        center_bias=center_bias,
+        center_focus=center_focus,
+        jit=jit,
     )
 
     print('Starting up...')

@@ -22,19 +22,15 @@ from tqdm import trange, tqdm
 
 from .clip import load, tokenize
 
-assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
 
 # graceful keyboard interrupt
-
 terminate = False
-
-
 def signal_handling(signum, frame):
     global terminate
     terminate = True
 
-
 signal.signal(signal.SIGINT, signal_handling)
+
 
 # Helpers
 
@@ -130,6 +126,7 @@ class DeepDaze(nn.Module):
             self,
             clip_perceptor,
             clip_norm,
+            input_res,
             total_batches,
             batch_size,
             num_layers=8,
@@ -152,7 +149,9 @@ class DeepDaze(nn.Module):
         super().__init__()
         # load clip
         self.perceptor = clip_perceptor
-        self.input_resolution = self.perceptor[0].input_resolution.item()
+        #self.input_resolution = 
+        #self.input_resolution = self.perceptor[0].input_resolution.item()
+        self.input_resolution = input_res
         self.normalize_image = clip_norm
         
         self.loss_coef = loss_coef
@@ -289,6 +288,7 @@ class Imagine(nn.Module):
             center_bias=False,
             center_focus=2,
             optimizer="AdamP",
+            jit=True,
     ):
 
         super().__init__()
@@ -317,18 +317,23 @@ class Imagine(nn.Module):
         else: 
             self.epochs = epochs
         # Load CLIP
-        device = "cuda"
-        clip_perceptor, normalize_image = load(model_name)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        clip_perceptor, norm = load(model_name, jit=jit, device=self.device)
         self.perceptor = [clip_perceptor.eval()]
-        self.clip_transform = create_clip_img_transform(clip_perceptor.input_resolution.item())
+        if jit == False:
+            input_res = clip_perceptor.visual.input_resolution
+        else:
+            input_res = clip_perceptor.input_resolution.item()
+        self.clip_transform = create_clip_img_transform(input_res)
         
         self.iterations = iterations
         self.image_width = image_width
         total_batches = self.epochs * self.iterations * batch_size * gradient_accumulate_every
         model = DeepDaze(
                 self.perceptor,
-                normalize_image,
-                total_batches=total_batches,
+                norm,
+                input_res,
+                total_batches,
                 batch_size=batch_size,
                 image_width=image_width,
                 num_layers=num_layers,
@@ -344,7 +349,7 @@ class Imagine(nn.Module):
                 do_cutout=do_cutout,
                 center_bias=center_bias,
                 center_focus=center_focus,
-            ).cuda()
+            ).to(self.device)
         self.model = model
         self.scaler = GradScaler()
         if optimizer == "AdamP":
@@ -376,14 +381,14 @@ class Imagine(nn.Module):
             start_img_transform = T.Compose([T.Resize(image_width),
                                              T.CenterCrop((image_width, image_width)),
                                              T.ToTensor()])
-            image_tensor = start_img_transform(image).unsqueeze(0).cuda()
+            image_tensor = start_img_transform(image).unsqueeze(0).to(self.device)
             self.start_image = image_tensor
             
     def create_clip_encoding(self, text=None, img=None, encoding=None):
         self.text = text
         self.img = img
         if encoding is not None:
-            encoding = encoding.cuda()
+            encoding = encoding.to(self.device)
         elif self.create_story:
             encoding = self.update_story_encoding(epoch=0, iteration=1)
         elif text is not None and img is not None:
@@ -395,7 +400,7 @@ class Imagine(nn.Module):
         return encoding
 
     def create_text_encoding(self, text):
-        tokenized_text = tokenize(text).cuda()
+        tokenized_text = tokenize(text).to(self.device)
         with torch.no_grad():
             text_encoding = self.perceptor[0].encode_text(tokenized_text).detach()
         return text_encoding
@@ -403,14 +408,14 @@ class Imagine(nn.Module):
     def create_img_encoding(self, img):
         if isinstance(img, str):
             img = Image.open(img)
-        normed_img = self.clip_transform(img).unsqueeze(0).cuda()
+        normed_img = self.clip_transform(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
             img_encoding = self.perceptor[0].encode_image(normed_img).detach()
         return img_encoding
     
     def set_clip_encoding(self, text=None, img=None, encoding=None):
         encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding)
-        self.clip_encoding = encoding.cuda()
+        self.clip_encoding = encoding.to(self.device)
         
     def update_story_encoding(self, epoch, iteration):
         if self.words is None:
