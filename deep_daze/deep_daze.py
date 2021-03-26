@@ -316,6 +316,12 @@ class Imagine(nn.Module):
             print("Running for ", self.epochs, "epochs")
         else: 
             self.epochs = epochs
+        # jit models only compatible with version 1.7.1
+        if torch.__version__ != "1.7.1":
+            if jit == True:
+                print("Setting jit to False because torch version is not 1.7.1.")
+            jit = False
+
         # Load CLIP
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         clip_perceptor, norm = load(model_name, jit=jit, device=self.device)
