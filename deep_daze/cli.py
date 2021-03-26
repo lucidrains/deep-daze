@@ -10,6 +10,7 @@ def train(
         img=None,
         learning_rate=1e-5,
         num_layers=16,
+        hidden_size=256,
         batch_size=4,
         gradient_accumulate_every=4,
         epochs=20,
@@ -46,6 +47,7 @@ def train(
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
     :param img: The path to a jpg or png image which you would like to imagine. Can be combined with text.
     :param learning_rate: The learning rate of the neural net.
+    :param hidden_size: The hidden layer size of the Siren net.
     :param num_layers: The number of hidden layers to use in the Siren neural net.
     :param batch_size: The number of generated images to pass into Siren before calculating loss. Decreasing this can lower memory and accuracy.
     :param gradient_accumulate_every: Calculate a weighted loss of n samples for each iteration. Increasing this can help increase accuracy with lower batch sizes.
@@ -120,6 +122,7 @@ def train(
         center_bias=center_bias,
         center_focus=center_focus,
         jit=jit,
+        hidden_size=hidden_size,
     )
 
     print('Starting up...')

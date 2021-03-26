@@ -144,6 +144,7 @@ class DeepDaze(nn.Module):
             do_cutout=True,
             center_bias=False,
             center_focus=2,
+            hidden_size=256,
             
     ):
         super().__init__()
@@ -164,7 +165,7 @@ class DeepDaze(nn.Module):
 
         siren = SirenNet(
             dim_in=2,
-            dim_hidden=256,
+            dim_hidden=hidden_size,
             num_layers=num_layers,
             dim_out=3,
             use_bias=True,
@@ -287,6 +288,7 @@ class Imagine(nn.Module):
             center_focus=2,
             optimizer="AdamP",
             jit=True,
+            hidden_size=256,
     ):
 
         super().__init__()
@@ -347,6 +349,7 @@ class Imagine(nn.Module):
                 do_cutout=do_cutout,
                 center_bias=center_bias,
                 center_focus=center_focus,
+                hidden_size=hidden_size,
             ).to(self.device)
         self.model = model
         self.scaler = GradScaler()
