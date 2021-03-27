@@ -317,7 +317,7 @@ class Imagine(nn.Module):
         else: 
             self.epochs = epochs
         # jit models only compatible with version 1.7.1
-        if torch.__version__ != "1.7.1":
+        if "1.7.1" not in torch.__version__:
             if jit == True:
                 print("Setting jit to False because torch version is not 1.7.1.")
             jit = False
