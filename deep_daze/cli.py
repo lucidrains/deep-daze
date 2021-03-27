@@ -33,6 +33,7 @@ def train(
         create_story=False,
         story_start_words=5,
         story_words_per_epoch=5,
+        save_gif=False
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -62,6 +63,7 @@ def train(
     :param create_story: Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
     :param story_start_words: Only used if create_story is True. How many words to optimize on for the first epoch.
     :param story_words_per_epoch: Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    :param save_gif: Only used if save_progress is True. Saves a GIF animation of the generation procedure using the saved frames.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -95,7 +97,8 @@ def train(
         saturate_bound=saturate_bound,
         create_story=create_story,
         story_start_words=story_start_words,
-        story_words_per_epoch=story_words_per_epoch
+        story_words_per_epoch=story_words_per_epoch,
+        save_gif=save_gif
     )
 
     print('Starting up...')
