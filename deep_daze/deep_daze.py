@@ -19,7 +19,7 @@ import torchvision.transforms as T
 
 from tqdm import trange, tqdm
 
-from clip import load, tokenize
+from deep_daze.clip import load, tokenize
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
 
