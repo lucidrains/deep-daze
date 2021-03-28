@@ -13,6 +13,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torch_optimizer import DiffGrad, AdamP
 
 from PIL import Image
+from imageio import imread, mimsave
 import torchvision.transforms as T
 #from torchvision.utils import save_image
 
@@ -223,6 +224,7 @@ class Imagine(nn.Module):
             create_story=False,
             story_start_words=5,
             story_words_per_epoch=5,
+            save_gif=False
     ):
 
         super().__init__()
@@ -293,6 +295,8 @@ class Imagine(nn.Module):
 
             image_tensor = self.clip_img_transform(image)[None, ...].cuda()
             self.start_image = image_tensor
+
+        self.save_gif = save_gif
             
     def create_clip_encoding(self, text=None, img=None, encoding=None):
         self.text = text
@@ -410,6 +414,15 @@ class Imagine(nn.Module):
 
         tqdm.write(f'image updated at "./{str(self.filename)}"')
 
+    def generate_gif(self):
+        images = []
+        for file_name in sorted(os.listdir('./')):
+            if file_name.startswith(self.textpath) and file_name != f'{self.textpath}.jpg':
+                images.append(imread(os.path.join('./', file_name)))
+
+        mimsave(f'{self.textpath}.gif', images)
+        print(f'Generated image generation animation at ./{self.textpath}.gif')
+
     def forward(self):
         if exists(self.start_image):
             tqdm.write('Preparing with initial image...')
@@ -453,3 +466,7 @@ class Imagine(nn.Module):
                 self.clip_encoding = self.update_story_encoding(epoch, i)
 
         self.save_image(epoch, i) # one final save at end
+
+        if self.save_gif and self.save_progress:
+            self.generate_gif()
+        
