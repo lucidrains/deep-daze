@@ -170,7 +170,7 @@ FLAGS
         Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
     --save_gif=SAVE_GIF
         Default: False
-        Wether or not to save a GIF animation of the generation procedure. Only works if save_progress is set to True.
+        Whether or not to save a GIF animation of the generation procedure. Only works if save_progress is set to True.
 ```
 
 ### Priming
