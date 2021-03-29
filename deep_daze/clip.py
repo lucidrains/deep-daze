@@ -45,7 +45,7 @@ def _download(url: str, root: str = os.path.expanduser("~/.cache/clip")):
             desc=f"Downloading {filename}",
         ) as loop:
             while True:
-                buffer = source.read(8192)
+                buffer = source.read(524288)
                 if not buffer:
                     break
 
