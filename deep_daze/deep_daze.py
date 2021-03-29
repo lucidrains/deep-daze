@@ -1,5 +1,4 @@
 import os
-import signal
 import subprocess
 import sys
 import random
@@ -23,17 +22,6 @@ from deep_daze.clip import load, tokenize
 
 assert torch.cuda.is_available(), 'CUDA must be available in order to use Deep Daze'
 
-# graceful keyboard interrupt
-
-terminate = False
-
-
-def signal_handling(signum, frame):
-    global terminate
-    terminate = True
-
-
-signal.signal(signal.SIGINT, signal_handling)
 
 perceptor, normalize_image = load('ViT-B/32', jit = False)
 
@@ -428,17 +416,17 @@ class Imagine(nn.Module):
             tqdm.write('Preparing with initial image...')
             optim = DiffGrad(self.model.parameters(), lr = self.start_image_lr)
             pbar = trange(self.start_image_train_iters, desc='iteration')
-            for _ in pbar:
-                loss = self.model.model(self.start_image)
-                loss.backward()
-                pbar.set_description(f'loss: {loss.item():.2f}')
+            try:
+                for _ in pbar:
+                    loss = self.model.model(self.start_image)
+                    loss.backward()
+                    pbar.set_description(f'loss: {loss.item():.2f}')
 
-                optim.step()
-                optim.zero_grad()
-
-                if terminate:
-                    print('interrupted by keyboard, gracefully exiting')
-                    return exit()
+                    optim.step()
+                    optim.zero_grad()
+            except KeyboardInterrupt:
+                print('interrupted by keyboard, gracefully exiting')
+                return exit()
 
             del self.start_image
             del optim
@@ -452,21 +440,21 @@ class Imagine(nn.Module):
             open_folder('./')
             self.open_folder = False
 
-        for epoch in trange(self.epochs, desc='epochs'):
-            pbar = trange(self.iterations, desc='iteration')
-            for i in pbar:
-                _, loss = self.train_step(epoch, i)
-                pbar.set_description(f'loss: {loss.item():.2f}')
+        try:
+            for epoch in trange(self.epochs, desc='epochs'):
+                pbar = trange(self.iterations, desc='iteration')
+                for i in pbar:
+                    _, loss = self.train_step(epoch, i)
+                    pbar.set_description(f'loss: {loss.item():.2f}')
 
-                if terminate:
-                    print('interrupted by keyboard, gracefully exiting')
-                    return
-            # Update clip_encoding per epoch if we are creating a story
-            if self.create_story:
-                self.clip_encoding = self.update_story_encoding(epoch, i)
+                # Update clip_encoding per epoch if we are creating a story
+                if self.create_story:
+                    self.clip_encoding = self.update_story_encoding(epoch, i)
+        except KeyboardInterrupt:
+            print('interrupted by keyboard, gracefully exiting')
+            return
 
         self.save_image(epoch, i) # one final save at end
 
         if self.save_gif and self.save_progress:
             self.generate_gif()
-        
