@@ -168,6 +168,9 @@ FLAGS
     --theta_hidden=THETA_INITIAL
         Default: 30.0
         Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
+    --save_gif=SAVE_GIF
+        Default: False
+        Whether or not to save a GIF animation of the generation procedure. Only works if save_progress is set to True.
 ```
 
 ### Priming

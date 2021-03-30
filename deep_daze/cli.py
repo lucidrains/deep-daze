@@ -42,6 +42,7 @@ def train(
         center_bias=False,
         center_focus=2,
         jit=True,
+        save_gif=False
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
@@ -80,6 +81,7 @@ def train(
     :param center_bias: Whether to use a Gaussian distribution centered around the center of the image to sample the locations of random cutouts instead of a uniform distribution. Leads to the main generated objects to be more focused in the center,
     :param center_focus: How much to focus on the center if using center_bias. std = sampling_range / center_focus. High values lead to a very correct representation in the center but washed out colors and details towards the edges,
     :param jit: Whether to use the jit-compiled CLIP model. The jit model is faster.
+    :param save_gif: Only used if save_progress is True. Saves a GIF animation of the generation procedure using the saved frames.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -123,6 +125,7 @@ def train(
         center_focus=center_focus,
         jit=jit,
         hidden_size=hidden_size,
+        save_gif=save_gif
     )
 
     print('Starting up...')
