@@ -223,7 +223,7 @@ class DeepDaze(nn.Module):
         
         # calc image embedding
         with autocast(enabled=False):
-            image_embed = self.perceptor[0].encode_image(image_pieces)
+            image_embed = self.perceptor.encode_image(image_pieces)
             
         if self.avg_feats:
             image_embed = image_embed.mean(dim=0).unsqueeze(0)
@@ -307,6 +307,7 @@ class Imagine(nn.Module):
             print("Running for ", self.epochs, "epochs")
         else: 
             self.epochs = epochs
+
         # jit models only compatible with version 1.7.1
         if "1.7.1" not in torch.__version__:
             if jit == True:
@@ -316,7 +317,9 @@ class Imagine(nn.Module):
         # Load CLIP
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         clip_perceptor, norm = load(model_name, jit=jit, device=self.device)
-        self.perceptor = [clip_perceptor.eval()]
+        self.perceptor = clip_perceptor.eval()
+        for param in self.perceptor.parameters():
+            param.requires_grad = False
         if jit == False:
             input_res = clip_perceptor.visual.input_resolution
         else:
@@ -350,12 +353,13 @@ class Imagine(nn.Module):
             ).to(self.device)
         self.model = model
         self.scaler = GradScaler()
+        siren_params = model.model.parameters()
         if optimizer == "AdamP":
-            self.optimizer = AdamP(model.parameters(), lr)
+            self.optimizer = AdamP(siren_params, lr)
         elif optimizer == "Adam":
-            self.optimizer = torch.optim.Adam(model.parameters(), lr)
+            self.optimizer = torch.optim.Adam(siren_params, lr)
         elif optimizer == "DiffGrad":
-            self.optimizer = DiffGrad(model.parameters(), lr)
+            self.optimizer = DiffGrad(siren_params, lr)
         self.gradient_accumulate_every = gradient_accumulate_every
         self.save_every = save_every
         self.save_date_time = save_date_time
@@ -363,7 +367,7 @@ class Imagine(nn.Module):
         self.save_progress = save_progress
         self.text = text
         self.image = img
-        self.textpath = create_text_path(self.perceptor[0].context_length, text=text, img=img, encoding=clip_encoding)
+        self.textpath = create_text_path(self.perceptor.context_length, text=text, img=img, encoding=clip_encoding)
         self.filename = self.image_output_path()
         
         # create coding to optimize for
@@ -402,7 +406,7 @@ class Imagine(nn.Module):
     def create_text_encoding(self, text):
         tokenized_text = tokenize(text).to(self.device)
         with torch.no_grad():
-            text_encoding = self.perceptor[0].encode_text(tokenized_text).detach()
+            text_encoding = self.perceptor.encode_text(tokenized_text).detach()
         return text_encoding
     
     def create_img_encoding(self, img):
@@ -410,7 +414,7 @@ class Imagine(nn.Module):
             img = Image.open(img)
         normed_img = self.clip_transform(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
-            img_encoding = self.perceptor[0].encode_image(normed_img).detach()
+            img_encoding = self.perceptor.encode_image(normed_img).detach()
         return img_encoding
     
     def set_clip_encoding(self, text=None, img=None, encoding=None):
@@ -431,7 +435,7 @@ class Imagine(nn.Module):
                 count += 1
                 # TODO: possibly do not increase count for stop-words and break if a "." is encountered.
             # remove words until it fits in context length
-            while len(self.words) > self.perceptor[0].context_length:
+            while len(self.words) > self.perceptor.context_length:
                 # remove first word
                 self.words = " ".join(self.words.split(" ")[1:])
         # get new encoding
@@ -504,13 +508,13 @@ class Imagine(nn.Module):
             if file_name.startswith(self.textpath) and file_name != f'{self.textpath}.jpg':
                 images.append(imread(os.path.join('./', file_name)))
 
-        mimsave(f'{self.textpath}.gif', images)
-        print(f'Generated image generation animation at ./{self.textpath}.gif')
+        mimsave(f'{self.textpath}.mp4', images)
+        print(f'Generated image generation animation at ./{self.textpath}.mp4')
 
     def forward(self):
         if exists(self.start_image):
             tqdm.write('Preparing with initial image...')
-            optim = DiffGrad(self.model.parameters(), lr = self.start_image_lr)
+            optim = DiffGrad(self.model.model.parameters(), lr = self.start_image_lr)
             pbar = trange(self.start_image_train_iters, desc='iteration')
             try:
                 for _ in pbar:
