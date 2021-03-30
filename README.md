@@ -180,7 +180,7 @@ Technique first devised and shared by <a href="https://twitter.com/quasimondo">M
 Simply specify the path to the image you wish to use, and optionally the number of initial training steps.
 
 ```bash
-$ imagine 'a clear night sky filled with stars' --start-image-path ./cloudy-night-sky.jpg
+$ imagine 'a clear night sky filled with stars' --start_image_path ./cloudy-night-sky.jpg
 ```
 
 Primed starting image
