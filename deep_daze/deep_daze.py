@@ -136,6 +136,7 @@ class DeepDaze(nn.Module):
             center_bias=False,
             center_focus=2,
             hidden_size=256,
+            averaging_weight=0.5,
             
     ):
         super().__init__()
@@ -181,6 +182,7 @@ class DeepDaze(nn.Module):
         self.do_cutout = do_cutout
         self.center_bias = center_bias
         self.center_focus = center_focus
+        self.averaging_weight = averaging_weight
         
     def sample_sizes(self, lower, upper, width, gauss_mean):
         if self.gauss_sampling:
@@ -226,13 +228,23 @@ class DeepDaze(nn.Module):
             image_embed = self.perceptor.encode_image(image_pieces)
             
         if self.avg_feats:
-            image_embed = image_embed.mean(dim=0).unsqueeze(0)
             
+            avg_image_embed = image_embed.mean(dim=0).unsqueeze(0)
+            
+            averaged_loss = -self.loss_coef * torch.cosine_similarity(text_embed, avg_image_embed, dim=-1).mean()
+            
+            gen_loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
+            
+            loss = averaged_loss * (self.averaging_weight) + gen_loss * (1 - self.averaging_weight)
+
+        else:
+
+            # calc loss
+            loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
+
         # count batches
         if not dry_run:
             self.num_batches_processed += self.batch_size
-        # calc loss
-        loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
         
         return out, loss
 
@@ -266,6 +278,7 @@ class Imagine(nn.Module):
             upper_bound_cutout=1.0,
             saturate_bound=False,
             avg_feats=False,
+            averaging_weight=1.0,
 
             create_story=False,
             story_start_words=5,
@@ -279,7 +292,7 @@ class Imagine(nn.Module):
             optimizer="AdamP",
             jit=True,
             hidden_size=256,
-            save_gif=False
+            save_gif=False,
     ):
 
         super().__init__()
@@ -350,6 +363,7 @@ class Imagine(nn.Module):
                 center_bias=center_bias,
                 center_focus=center_focus,
                 hidden_size=hidden_size,
+                averaging_weight=averaging_weight,
             ).to(self.device)
         self.model = model
         self.scaler = GradScaler()
