@@ -128,7 +128,6 @@ class DeepDaze(nn.Module):
             lower_bound_cutout=0.1, # should be smaller than 0.8
             upper_bound_cutout=1.0,
             saturate_bound=False,
-            avg_feats=False,
             gauss_sampling=False,
             gauss_mean=0.6,
             gauss_std=0.2,
@@ -136,7 +135,7 @@ class DeepDaze(nn.Module):
             center_bias=False,
             center_focus=2,
             hidden_size=256,
-            averaging_weight=0.5,
+            averaging_weight=0.3,
             
     ):
         super().__init__()
@@ -175,7 +174,6 @@ class DeepDaze(nn.Module):
         self.saturate_limit = 0.75  # cutouts above this value lead to destabilization
         self.lower_bound_cutout = lower_bound_cutout
         self.upper_bound_cutout = upper_bound_cutout
-        self.avg_feats = avg_feats
         self.gauss_sampling = gauss_sampling
         self.gauss_mean = gauss_mean
         self.gauss_std = gauss_std
@@ -227,20 +225,14 @@ class DeepDaze(nn.Module):
         with autocast(enabled=False):
             image_embed = self.perceptor.encode_image(image_pieces)
             
-        if self.avg_feats:
-            
-            avg_image_embed = image_embed.mean(dim=0).unsqueeze(0)
-            
-            averaged_loss = -self.loss_coef * torch.cosine_similarity(text_embed, avg_image_embed, dim=-1).mean()
-            
-            gen_loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
-            
-            loss = averaged_loss * (self.averaging_weight) + gen_loss * (1 - self.averaging_weight)
-
-        else:
-
-            # calc loss
-            loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
+        # calc loss
+        # loss over averaged features of cutouts
+        avg_image_embed = image_embed.mean(dim=0).unsqueeze(0)
+        averaged_loss = -self.loss_coef * torch.cosine_similarity(text_embed, avg_image_embed, dim=-1).mean()
+        # loss over all cutouts
+        general_loss = -self.loss_coef * torch.cosine_similarity(text_embed, image_embed, dim=-1).mean()
+        # merge losses
+        loss = averaged_loss * (self.averaging_weight) + general_loss * (1 - self.averaging_weight)
 
         # count batches
         if not dry_run:
@@ -277,8 +269,7 @@ class Imagine(nn.Module):
             lower_bound_cutout=0.1, # should be smaller than 0.8
             upper_bound_cutout=1.0,
             saturate_bound=False,
-            avg_feats=False,
-            averaging_weight=1.0,
+            averaging_weight=0.3,
 
             create_story=False,
             story_start_words=5,
@@ -355,7 +346,6 @@ class Imagine(nn.Module):
                 lower_bound_cutout=lower_bound_cutout,
                 upper_bound_cutout=upper_bound_cutout,
                 saturate_bound=saturate_bound,
-                avg_feats=avg_feats,
                 gauss_sampling=gauss_sampling,
                 gauss_mean=gauss_mean,
                 gauss_std=gauss_std,
