@@ -42,7 +42,9 @@ def train(
         center_bias=False,
         center_focus=2,
         jit=True,
-        save_gif=False
+        save_gif=False,
+        model_name="ViT-B/32",
+        optimizer="AdamP"
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
