@@ -136,7 +136,6 @@ class DeepDaze(nn.Module):
             center_focus=2,
             hidden_size=256,
             averaging_weight=0.3,
-            
     ):
         super().__init__()
         # load clip
@@ -284,6 +283,7 @@ class Imagine(nn.Module):
             jit=True,
             hidden_size=256,
             save_gif=False,
+            save_video=False,
     ):
 
         super().__init__()
@@ -391,6 +391,7 @@ class Imagine(nn.Module):
             self.start_image = image_tensor
 
         self.save_gif = save_gif
+        self.save_video = save_video
             
     def create_clip_encoding(self, text=None, img=None, encoding=None):
         self.text = text
@@ -512,8 +513,12 @@ class Imagine(nn.Module):
             if file_name.startswith(self.textpath) and file_name != f'{self.textpath}.jpg':
                 images.append(imread(os.path.join('./', file_name)))
 
-        mimsave(f'{self.textpath}.mp4', images)
-        print(f'Generated image generation animation at ./{self.textpath}.mp4')
+        if self.save_video:
+            mimsave(f'{self.textpath}.mp4', images)
+            print(f'Generated image generation animation at ./{self.textpath}.mp4')
+        if self.save_gif:
+            mimsave(f'{self.textpath}.gif', images)
+            print(f'Generated image generation animation at ./{self.textpath}.gif')
 
     def forward(self):
         if exists(self.start_image):
@@ -560,5 +565,5 @@ class Imagine(nn.Module):
 
         self.save_image(epoch, i) # one final save at end
 
-        if self.save_gif and self.save_progress:
+        if (self.save_gif or self.save_video) and self.save_progress:
             self.generate_gif()

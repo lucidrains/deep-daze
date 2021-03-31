@@ -43,6 +43,7 @@ def train(
         center_focus=2,
         jit=True,
         save_gif=False,
+        save_video=False,
         model_name="ViT-B/32",
         optimizer="AdamP"
 ):
@@ -84,6 +85,7 @@ def train(
     :param center_focus: How much to focus on the center if using center_bias. std = sampling_range / center_focus. High values lead to a very correct representation in the center but washed out colors and details towards the edges,
     :param jit: Whether to use the jit-compiled CLIP model. The jit model is faster, but only compatible with torch version 1.7.1.
     :param save_gif: Only used if save_progress is True. Saves a GIF animation of the generation procedure using the saved frames.
+    :param save_video: Only used if save_progress is True. Saves a MP4 animation of the generation procedure using the saved frames.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -129,7 +131,8 @@ def train(
         hidden_size=hidden_size,
         model_name=model_name,
         optimizer=optimizer,
-        save_gif=save_gif
+        save_gif=save_gif,
+        save_video=save_video,
     )
 
     print('Starting up...')
