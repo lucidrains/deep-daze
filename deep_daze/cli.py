@@ -127,6 +127,8 @@ def train(
         center_focus=center_focus,
         jit=jit,
         hidden_size=hidden_size,
+        model_name=model_name,
+        optimizer=optimizer,
         save_gif=save_gif
     )
 
