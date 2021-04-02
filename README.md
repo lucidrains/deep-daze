@@ -44,7 +44,9 @@ New simplified notebook [![Open In Colab][colab-badge]][colab-notebook-2]
 [colab-notebook-2]: <https://colab.research.google.com/drive/1_YOHdORb0Fg1Q7vWZ_KlrtFe9Ur3pmVj?usp=sharing>
 [colab-badge]: <https://colab.research.google.com/assets/colab-badge.svg>
 
-This will require that you have an Nvidia GPU
+This will require that you have an Nvidia GPU or AMD GPU
+- Recommended: 16GB VRAM
+- Minimum Requirements: 4GB VRAM (Using VERY LOW settings, see instructions below) 
 
 ## Install
 
