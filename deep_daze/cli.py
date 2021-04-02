@@ -10,6 +10,7 @@ def train(
         img=None,
         learning_rate=1e-5,
         num_layers=16,
+        hidden_size=256,
         batch_size=4,
         gradient_accumulate_every=4,
         epochs=20,
@@ -33,12 +34,24 @@ def train(
         create_story=False,
         story_start_words=5,
         story_words_per_epoch=5,
-        save_gif=False
+        averaging_weight=0.3,
+        gauss_sampling=False,
+        gauss_mean=0.6,
+        gauss_std=0.2,
+        do_cutout=True,
+        center_bias=False,
+        center_focus=2,
+        jit=True,
+        save_gif=False,
+        save_video=False,
+        model_name="ViT-B/32",
+        optimizer="AdamP"
 ):
     """
     :param text: (required) A phrase less than 77 characters which you would like to visualize.
     :param img: The path to a jpg or png image which you would like to imagine. Can be combined with text.
     :param learning_rate: The learning rate of the neural net.
+    :param hidden_size: The hidden layer size of the Siren net.
     :param num_layers: The number of hidden layers to use in the Siren neural net.
     :param batch_size: The number of generated images to pass into Siren before calculating loss. Decreasing this can lower memory and accuracy.
     :param gradient_accumulate_every: Calculate a weighted loss of n samples for each iteration. Increasing this can help increase accuracy with lower batch sizes.
@@ -63,7 +76,16 @@ def train(
     :param create_story: Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
     :param story_start_words: Only used if create_story is True. How many words to optimize on for the first epoch.
     :param story_words_per_epoch: Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    :param averaging_weight: How much to weigh the averaged features of the random cutouts over the individual random cutouts. Increasing this value leads to more details being represented at the cost of some global coherence and a parcellation into smaller scenes.
+    :param gauss_sampling: Whether to use sampling from a Gaussian distribution instead of a uniform distribution.
+    :param gauss_mean: The mean of the Gaussian sampling distribution.
+    :param gauss_std: The standard deviation of the Gaussian sampling distribution.
+    :param do_cutouts: Whether to use random cutouts as an augmentation. This basically needs to be turned on unless some new augmentations are added in code eventually.
+    :param center_bias: Whether to use a Gaussian distribution centered around the center of the image to sample the locations of random cutouts instead of a uniform distribution. Leads to the main generated objects to be more focused in the center.
+    :param center_focus: How much to focus on the center if using center_bias. std = sampling_range / center_focus. High values lead to a very correct representation in the center but washed out colors and details towards the edges,
+    :param jit: Whether to use the jit-compiled CLIP model. The jit model is faster, but only compatible with torch version 1.7.1.
     :param save_gif: Only used if save_progress is True. Saves a GIF animation of the generation procedure using the saved frames.
+    :param save_video: Only used if save_progress is True. Saves a MP4 animation of the generation procedure using the saved frames.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):
@@ -98,7 +120,19 @@ def train(
         create_story=create_story,
         story_start_words=story_start_words,
         story_words_per_epoch=story_words_per_epoch,
-        save_gif=save_gif
+        averaging_weight=averaging_weight,
+        gauss_sampling=gauss_sampling,
+        gauss_mean=gauss_mean,
+        gauss_std=gauss_std,
+        do_cutout=do_cutout,
+        center_bias=center_bias,
+        center_focus=center_focus,
+        jit=jit,
+        hidden_size=hidden_size,
+        model_name=model_name,
+        optimizer=optimizer,
+        save_gif=save_gif,
+        save_video=save_video,
     )
 
     print('Starting up...')
