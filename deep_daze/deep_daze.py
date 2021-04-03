@@ -436,7 +436,7 @@ class Imagine(nn.Module):
     
     def index_of_first_separator(self) -> int:
         for c, word in enumerate(self.all_words):
-            if self.separator in word:
+            if self.separator in str(word):
                 return c +1
 
     def update_story_encoding(self, epoch, iteration):
