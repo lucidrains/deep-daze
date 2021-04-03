@@ -271,6 +271,7 @@ class Imagine(nn.Module):
             averaging_weight=0.3,
 
             create_story=False,
+            story_separator=None,
             story_start_words=5,
             story_words_per_epoch=5,
             gauss_sampling=False,
@@ -301,6 +302,7 @@ class Imagine(nn.Module):
         self.all_words = text.split(" ") if text is not None else None
         self.num_start_words = story_start_words
         self.words_per_epoch = story_words_per_epoch
+        self.separator = str(story_separator) if story_separator is not None else None
         if create_story:
             assert text is not None,  "We need text input to create a story..."
             # overwrite epochs to match story length
@@ -308,7 +310,13 @@ class Imagine(nn.Module):
             self.epochs = 1 + (num_words - self.num_start_words) / self.words_per_epoch
             # add one epoch if not divisible
             self.epochs = int(self.epochs) if int(self.epochs) == self.epochs else int(self.epochs) + 1
-            print("Running for ", self.epochs, "epochs")
+            if self.separator is not None:
+                if self.separator not in text:
+                    print("Separator '"+self.separator+"' will be ignored since not in text!")
+                    self.separator = None
+                else:
+                    self.epochs = len(list(filter(None,text.split(self.separator))))
+            print("Running for ", self.epochs, "epochs" + (" (splitted with '"+self.separator+"' as the separator)") if self.separator is not None else "epochs")
         else: 
             self.epochs = epochs
 
@@ -425,24 +433,33 @@ class Imagine(nn.Module):
     def set_clip_encoding(self, text=None, img=None, encoding=None):
         encoding = self.create_clip_encoding(text=text, img=img, encoding=encoding)
         self.clip_encoding = encoding.to(self.device)
-        
+    
+    def index_of_first_separator(self) -> int:
+        for c, word in enumerate(self.all_words):
+            if self.separator in word:
+                return c +1
+
     def update_story_encoding(self, epoch, iteration):
-        if self.words is None:
-            self.words = " ".join(self.all_words[:self.num_start_words])
-            self.all_words = self.all_words[self.num_start_words:]
+        if self.separator is not None:
+            self.words = " ".join(self.all_words[:self.index_of_first_separator()])
+            self.all_words = self.all_words[self.index_of_first_separator():]
         else:
-            # add words_per_epoch new words
-            count = 0
-            while count < self.words_per_epoch and len(self.all_words) > 0:
-                new_word = self.all_words[0]
-                self.words = " ".join(self.words.split(" ") + [new_word])
-                self.all_words = self.all_words[1:]
-                count += 1
-                # TODO: possibly do not increase count for stop-words and break if a "." is encountered.
-            # remove words until it fits in context length
-            while len(self.words) > self.perceptor.context_length:
-                # remove first word
-                self.words = " ".join(self.words.split(" ")[1:])
+            if self.words is None:
+                self.words = " ".join(self.all_words[:self.num_start_words])
+                self.all_words = self.all_words[self.num_start_words:]
+            else:
+                # add words_per_epoch new words
+                count = 0
+                while count < self.words_per_epoch and len(self.all_words) > 0:
+                    new_word = self.all_words[0]
+                    self.words = " ".join(self.words.split(" ") + [new_word])
+                    self.all_words = self.all_words[1:]
+                    count += 1
+                    # TODO: possibly do not increase count for stop-words and break if a "." is encountered.
+                # remove words until it fits in context length
+                while len(self.words) > self.perceptor.context_length:
+                    # remove first word
+                    self.words = " ".join(self.words.split(" ")[1:])
         # get new encoding
         print("Now thinking of: ", '"', self.words, '"')
         sequence_number = self.get_img_sequence_number(epoch, iteration)

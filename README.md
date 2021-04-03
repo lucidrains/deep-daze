@@ -98,6 +98,9 @@ FLAGS
     --create_story=CREATE_STORY
         Default: False
         Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
+    --story_separator:
+        Default: None
+        Only used if create_story is True. Defines a separator like '.' that splits the text into groups for each epoch. Separator needs to be in the text otherwise it will be ignored
     --story_start_words=STORY_START_WORDS
         Default: 5
         Only used if create_story is True. How many words to optimize on for the first epoch.
