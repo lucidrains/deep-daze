@@ -273,9 +273,9 @@ class Imagine(nn.Module):
             averaging_weight=0.3,
 
             create_story=False,
-            story_separator=None,
             story_start_words=5,
             story_words_per_epoch=5,
+            story_separator=None,
             gauss_sampling=False,
             gauss_mean=0.6,
             gauss_std=0.2,
@@ -301,10 +301,12 @@ class Imagine(nn.Module):
         # fields for story creation:
         self.create_story = create_story
         self.words = None
+        self.separator = str(story_separator) if story_separator is not None else None
+        if self.separator is not None and text is not None:
+            text = text.replace(self.separator,self.separator+' ').replace('  ',' ')  #adds space to separator and removes double spaces that might be generated
         self.all_words = text.split(" ") if text is not None else None
         self.num_start_words = story_start_words
         self.words_per_epoch = story_words_per_epoch
-        self.separator = str(story_separator) if story_separator is not None else None
         if create_story:
             assert text is not None,  "We need text input to create a story..."
             # overwrite epochs to match story length
