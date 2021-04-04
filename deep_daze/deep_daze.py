@@ -101,8 +101,8 @@ def norm_siren_output(img):
 
 def create_text_path(context_length, text=None, img=None, encoding=None, separator=None):
     if text is not None:
-        if separator is not None:
-            text = text[:text.index(separator)] #Reduces filename to first epoch text
+        if separator is not None and separator in text:
+            text = text[:text.index(separator, )] #Reduces filename to first epoch text
         input_name = text.replace(" ", "_")[:context_length]
     elif img is not None:
         if isinstance(img, str):
@@ -303,7 +303,7 @@ class Imagine(nn.Module):
         self.words = None
         self.separator = str(story_separator) if story_separator is not None else None
         if self.separator is not None and text is not None:
-            text = text.replace(self.separator,self.separator+' ').replace('  ',' ')  #adds space to separator and removes double spaces that might be generated
+            text = text.replace(self.separator,self.separator+' ').replace('  ',' ')  #adds a space to each separator and removes double spaces that might be generated
         self.all_words = text.split(" ") if text is not None else None
         self.num_start_words = story_start_words
         self.words_per_epoch = story_words_per_epoch
@@ -320,7 +320,7 @@ class Imagine(nn.Module):
                     self.separator = None
                 else:
                     self.epochs = len(list(filter(None,text.split(self.separator))))
-            print("Running for ", self.epochs, "epochs" + (" (splitted with '"+self.separator+"' as the separator)") if self.separator is not None else "epochs")
+            print("Running for", self.epochs, "epochs" + (" (splitted with '"+self.separator+"' as the separator)" if self.separator is not None else ""))
         else: 
             self.epochs = epochs
 
