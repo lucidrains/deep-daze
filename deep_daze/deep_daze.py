@@ -102,7 +102,7 @@ def norm_siren_output(img):
 def create_text_path(context_length, text=None, img=None, encoding=None, separator=None):
     if text is not None:
         if separator is not None:
-            text = text[:text.index(separator)].replace(separator,'') #removes separator from epoch-text
+            text = text[:text.index(separator)] #Reduces filename to first epoch text
         input_name = text.replace(" ", "_")[:context_length]
     elif img is not None:
         if isinstance(img, str):
