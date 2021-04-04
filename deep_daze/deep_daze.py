@@ -99,8 +99,10 @@ def norm_siren_output(img):
     return ((img + 1) * 0.5).clamp(0.0, 1.0)
 
 
-def create_text_path(context_length, text=None, img=None, encoding=None):
+def create_text_path(context_length, text=None, img=None, encoding=None, separator=None):
     if text is not None:
+        if separator is not None:
+            text = text.replace(separator,'') #removes separator from epoch-text
         input_name = text.replace(" ", "_")[:context_length]
     elif img is not None:
         if isinstance(img, str):
@@ -379,7 +381,7 @@ class Imagine(nn.Module):
         self.save_progress = save_progress
         self.text = text
         self.image = img
-        self.textpath = create_text_path(self.perceptor.context_length, text=text, img=img, encoding=clip_encoding)
+        self.textpath = create_text_path(self.perceptor.context_length, text=text, img=img, encoding=clip_encoding, separator=story_separator)
         self.filename = self.image_output_path()
         
         # create coding to optimize for
@@ -442,6 +444,7 @@ class Imagine(nn.Module):
     def update_story_encoding(self, epoch, iteration):
         if self.separator is not None:
             self.words = " ".join(self.all_words[:self.index_of_first_separator()])
+            self.words = self.words.replace(self.separator,'')  #removes separator from epoch-text
             self.all_words = self.all_words[self.index_of_first_separator():]
         else:
             if self.words is None:
