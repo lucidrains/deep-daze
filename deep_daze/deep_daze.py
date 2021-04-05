@@ -297,12 +297,20 @@ class Imagine(nn.Module):
             torch.cuda.manual_seed(seed)
             random.seed(seed)
             torch.backends.cudnn.deterministic = True
+
+        #exit if text is empty
+        if text is None or str(text).replace(' ','') == '':
+            print('Exiting because no text given! Needs to be a phrase with less than 77 characters you would like to visualize.')
+            exit()
             
         # fields for story creation:
         self.create_story = create_story
         self.words = None
         self.separator = str(story_separator) if story_separator is not None else None
         if self.separator is not None and text is not None:
+            if str(text).replace(' ','').replace(self.separator,'') == '':  #exit if text is just the separator
+                print('Exiting because the text only consists of the separator! Needs words or phrases that are separated by the separator.')
+                exit()
             text = text.replace(self.separator,self.separator+' ').replace('  ',' ')  #adds a space to each separator and removes double spaces that might be generated
         self.all_words = text.split(" ") if text is not None else None
         self.num_start_words = story_start_words
@@ -320,7 +328,7 @@ class Imagine(nn.Module):
                     self.separator = None
                 else:
                     self.epochs = len(list(filter(None,text.split(self.separator))))
-            print("Running for", self.epochs, "epochs" + (" (splitted with '"+self.separator+"' as the separator)" if self.separator is not None else ""))
+            print("Running for", self.epochs, "epochs" + (" (split with '"+self.separator+"' as the separator)" if self.separator is not None else ""))
         else: 
             self.epochs = epochs
 
