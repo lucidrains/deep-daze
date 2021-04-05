@@ -34,6 +34,7 @@ def train(
         create_story=False,
         story_start_words=5,
         story_words_per_epoch=5,
+        story_separator=None,
         averaging_weight=0.3,
         gauss_sampling=False,
         gauss_mean=0.6,
@@ -76,6 +77,7 @@ def train(
     :param create_story: Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
     :param story_start_words: Only used if create_story is True. How many words to optimize on for the first epoch.
     :param story_words_per_epoch: Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    :param story_separator: Only used if create_story is True. Defines a separator like '.' that splits the text into groups for each epoch. Separator needs to be in the text otherwise it will be ignored!
     :param averaging_weight: How much to weigh the averaged features of the random cutouts over the individual random cutouts. Increasing this value leads to more details being represented at the cost of some global coherence and a parcellation into smaller scenes.
     :param gauss_sampling: Whether to use sampling from a Gaussian distribution instead of a uniform distribution.
     :param gauss_mean: The mean of the Gaussian sampling distribution.
@@ -120,6 +122,7 @@ def train(
         create_story=create_story,
         story_start_words=story_start_words,
         story_words_per_epoch=story_words_per_epoch,
+        story_separator=story_separator,
         averaging_weight=averaging_weight,
         gauss_sampling=gauss_sampling,
         gauss_mean=gauss_mean,

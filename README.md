@@ -104,6 +104,9 @@ FLAGS
     --story_words_per_epoch=STORY_WORDS_PER_EPOCH
         Default: 5
         Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
+    --story_separator:
+        Default: None
+        Only used if create_story is True. Defines a separator like '.' that splits the text into groups for each epoch. Separator needs to be in the text otherwise it will be ignored
     --lower_bound_cutout=LOWER_BOUND_CUTOUT
         Default: 0.1
         Lower bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should be smaller than 0.8.
