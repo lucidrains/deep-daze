@@ -102,7 +102,8 @@ def norm_siren_output(img):
 def create_text_path(context_length, text=None, img=None, encoding=None, separator=None):
     if text is not None:
         if separator is not None and separator in text:
-            text = text[:text.index(separator, )] #Reduces filename to first epoch text
+            #Reduces filename to first epoch text
+            text = text[:text.index(separator, )]
         input_name = text.replace(" ", "_")[:context_length]
     elif img is not None:
         if isinstance(img, str):
@@ -308,10 +309,12 @@ class Imagine(nn.Module):
         self.words = None
         self.separator = str(story_separator) if story_separator is not None else None
         if self.separator is not None and text is not None:
-            if str(text).replace(' ','').replace(self.separator,'') == '':  #exit if text is just the separator
+            #exit if text is just the separator
+            if str(text).replace(' ','').replace(self.separator,'') == '':
                 print('Exiting because the text only consists of the separator! Needs words or phrases that are separated by the separator.')
                 exit()
-            text = text.replace(self.separator,self.separator+' ').replace('  ',' ')  #adds a space to each separator and removes double spaces that might be generated
+            #adds a space to each separator and removes double spaces that might be generated
+            text = text.replace(self.separator,self.separator+' ').replace('  ',' ')
         self.all_words = text.split(" ") if text is not None else None
         self.num_start_words = story_start_words
         self.words_per_epoch = story_words_per_epoch
@@ -454,7 +457,8 @@ class Imagine(nn.Module):
     def update_story_encoding(self, epoch, iteration):
         if self.separator is not None:
             self.words = " ".join(self.all_words[:self.index_of_first_separator()])
-            self.words = self.words.replace(self.separator,'')  #removes separator from epoch-text
+            #removes separator from epoch-text
+            self.words = self.words.replace(self.separator,'')
             self.all_words = self.all_words[self.index_of_first_separator():]
         else:
             if self.words is None:
@@ -468,7 +472,6 @@ class Imagine(nn.Module):
                     self.words = " ".join(self.words.split(" ") + [new_word])
                     self.all_words = self.all_words[1:]
                     count += 1
-                    # TODO: possibly do not increase count for stop-words and break if a "." is encountered.
                 # remove words until it fits in context length
                 while len(self.words) > self.perceptor.context_length:
                     # remove first word
