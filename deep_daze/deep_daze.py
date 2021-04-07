@@ -314,7 +314,7 @@ class Imagine(nn.Module):
                 print('Exiting because the text only consists of the separator! Needs words or phrases that are separated by the separator.')
                 exit()
             #adds a space to each separator and removes double spaces that might be generated
-            text = text.replace(self.separator,self.separator+' ').replace('  ',' ')
+            text = text.replace(self.separator,self.separator+' ').replace('  ',' ').strip()
         self.all_words = text.split(" ") if text is not None else None
         self.num_start_words = story_start_words
         self.words_per_epoch = story_words_per_epoch
