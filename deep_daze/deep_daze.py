@@ -298,11 +298,6 @@ class Imagine(nn.Module):
             torch.cuda.manual_seed(seed)
             random.seed(seed)
             torch.backends.cudnn.deterministic = True
-
-        #exit if text is empty
-        if text is None or str(text).replace(' ','') == '':
-            print('Exiting because no text given! Needs to be a phrase with less than 77 characters you would like to visualize.')
-            exit()
             
         # fields for story creation:
         self.create_story = create_story
