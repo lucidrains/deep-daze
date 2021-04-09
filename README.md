@@ -54,6 +54,16 @@ This will require that you have an Nvidia GPU or AMD GPU
 $ pip install deep-daze
 ```
 
+### Windows Install
+
+<img src="./instruction_images/Windows/Step_1_DD_Win.png" width="480px"></img>
+
+Presuming Python is installed: 
+- Open command prompt and navigate to the directory of your current version of Python
+```bash
+  pip install deep-daze
+```
+
 ## Examples
 
 ```bash
