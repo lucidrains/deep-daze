@@ -69,8 +69,17 @@ Presuming Python is installed:
 ```bash
 $ imagine "a house in the forest"
 ```
+For Windows:
+
+<img src="./instruction_images/Windows/Step_2_DD_Win.png" width="480px"></img>
+
+- Open command prompt as administrator
+```bash
+  imagine "a house in the forest"
+```
 
 That's it.
+
 
 If you have enough memory, you can get better quality by adding a `--deeper` flag
 
