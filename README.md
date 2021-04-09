@@ -52,7 +52,7 @@ This will require that you have an Nvidia GPU or AMD GPU
 
 ```bash
 $ pip install deep-daze
-```
+``` 
 
 ### Windows Install
 
