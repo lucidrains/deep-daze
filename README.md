@@ -44,12 +44,24 @@ New simplified notebook [![Open In Colab][colab-badge]][colab-notebook-2]
 [colab-notebook-2]: <https://colab.research.google.com/drive/1_YOHdORb0Fg1Q7vWZ_KlrtFe9Ur3pmVj?usp=sharing>
 [colab-badge]: <https://colab.research.google.com/assets/colab-badge.svg>
 
-This will require that you have an Nvidia GPU
+This will require that you have an Nvidia GPU or AMD GPU
+- Recommended: 16GB VRAM
+- Minimum Requirements: 4GB VRAM (Using VERY LOW settings, see usage instructions below) 
 
 ## Install
 
 ```bash
 $ pip install deep-daze
+```  
+
+### Windows Install
+
+<img src="./instruction_images/Windows/Step_1_DD_Win.png" width="480px"></img>
+
+Presuming Python is installed: 
+- Open command prompt and navigate to the directory of your current version of Python
+```bash
+  pip install deep-daze
 ```
 
 ## Examples
@@ -57,8 +69,17 @@ $ pip install deep-daze
 ```bash
 $ imagine "a house in the forest"
 ```
+For Windows:
+
+<img src="./instruction_images/Windows/Step_2_DD_Win.png" width="480px"></img>
+
+- Open command prompt as administrator
+```bash
+  imagine "a house in the forest"
+```
 
 That's it.
+
 
 If you have enough memory, you can get better quality by adding a `--deeper` flag
 
