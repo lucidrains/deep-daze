@@ -49,7 +49,7 @@ def train(
         optimizer="AdamP"
 ):
     """
-    :param text: (required) A phrase less than 77 characters which you would like to visualize.
+    :param text: (required) A phrase less than 77 tokens which you would like to visualize.
     :param img: The path to a jpg or png image which you would like to imagine. Can be combined with text.
     :param learning_rate: The learning rate of the neural net.
     :param hidden_size: The hidden layer size of the Siren net.
@@ -74,7 +74,7 @@ def train(
     :param upper_bound_cutout: The upper bound for the cutouts used in generation.
     :param lower_bound_cutout: The lower bound for the cutouts used in generation.
     :param saturate_bound: If True, the LOWER_BOUND_CUTOUT is linearly increased to 0.75 during training.
-    :param create_story: Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
+    :param create_story: Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 tokens can be used. Requires save_progress to visualize the transitions of the story.
     :param story_start_words: Only used if create_story is True. How many words to optimize on for the first epoch.
     :param story_words_per_epoch: Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
     :param story_separator: Only used if create_story is True. Defines a separator like '.' that splits the text into groups for each epoch. Separator needs to be in the text otherwise it will be ignored!
