@@ -107,7 +107,7 @@ SYNOPSIS
 
 POSITIONAL ARGUMENTS
     TEXT
-        (required) A phrase less than 77 characters which you would like to visualize.
+        (required) A phrase less than 77 tokens which you would like to visualize.
 
 FLAGS
     --img=IMAGE_PATH
@@ -118,7 +118,7 @@ FLAGS
         User-created custom CLIP encoding. If used, replaces any text or image that was used.
     --create_story=CREATE_STORY
         Default: False
-        Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 chars can be used. Requires save_progress to visualize the transitions of the story.
+        Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 tokens can be used. Requires save_progress to visualize the transitions of the story.
     --story_start_words=STORY_START_WORDS
         Default: 5
         Only used if create_story is True. How many words to optimize on for the first epoch.
@@ -248,7 +248,7 @@ The network's interpretation:
 
 
 ### New: Create a story
-The regular mode for texts only allows 77 characters. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`.
+The regular mode for texts only allows 77 tokens. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`.
 
 Given the poem “Stopping by Woods On a Snowy Evening” by Robert Frost - 
 "Whose woods these are I think I know. His house is in the village though; He will not see me stopping here To watch his woods fill up with snow. My little horse must think it queer To stop without a farmhouse near Between the woods and frozen lake The darkest evening of the year. He gives his harness bells a shake To ask if there is some mistake. The only other sound’s the sweep Of easy wind and downy flake. The woods are lovely, dark and deep, But I have promises to keep, And miles to go before I sleep, And miles to go before I sleep.".
