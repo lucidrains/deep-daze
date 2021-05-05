@@ -88,6 +88,8 @@ def train(
     :param jit: Whether to use the jit-compiled CLIP model. The jit model is faster, but only compatible with torch version 1.7.1.
     :param save_gif: Only used if save_progress is True. Saves a GIF animation of the generation procedure using the saved frames.
     :param save_video: Only used if save_progress is True. Saves a MP4 animation of the generation procedure using the saved frames.
+    :param model_name: The model name to use. Options are RN50, RN101, RN50x4, and ViT-B/32.
+    :param optimizer: The optimizer to use. options are Adam, AdamP, and DiffGrad.
     """
     # Don't instantiate imagine if the user just wants help.
     if any("--help" in arg for arg in sys.argv):

@@ -1,36 +1,20 @@
 ## Deep Daze
 
-<img src="./samples/Mist_over_green_hills.jpg" width="256px"></img>
+| <img src="./samples/Mist_over_green_hills.jpg" width="256px"></img> | <img src="./samples/Shattered_plates_on_the_grass.jpg" width="256px"></img> |
+|---|---|
+| *mist over green hills* | *shattered plates on the grass* |
 
-*mist over green hills*
+| <img src="./samples/Cosmic_love_and_attention.jpg" width="256px"></img> | <img src="./samples/A_time_traveler_in_the_crowd.jpg" width="256px"></img> |
+|---|---|
+| *cosmic love and attention* | *a time traveler in the crowd* |
 
-<img src="./samples/Shattered_plates_on_the_grass.jpg" width="256px"></img>
+| <img src="./samples/Life_during_the_plague.jpg" width="256px"></img>| <img src="./samples/Meditative_peace_in_a_sunlit_forest.jpg" width="256px"></img> |
+|---|---|
+| *life during the plague* | *meditative peace in a sunlit forest* |
 
-*shattered plates on the grass*
-
-<img src="./samples/Cosmic_love_and_attention.jpg" width="256px"></img>
-
-*cosmic love and attention*
-
-<img src="./samples/A_time_traveler_in_the_crowd.jpg" width="256px"></img>
-
-*a time traveler in the crowd*
-
-<img src="./samples/Life_during_the_plague.jpg" width="256px"></img>
-
-*life during the plague*
-
-<img src="./samples/Meditative_peace_in_a_sunlit_forest.jpg" width="256px"></img>
-
-*meditative peace in a sunlit forest*
-
-<img src="./samples/A_man_painting_a_completely_red_image.png" width="256px"></img>
-
-*a man painting a completely red image*
-
-<img src="./samples/A_psychedelic_experience_on_LSD.png" width="256px"></img>
-
-*a psychedelic experience on LSD*
+| <img src="./samples/A_man_painting_a_completely_red_image.png" width="256px"></img> | <img src="./samples/A_psychedelic_experience_on_LSD.png" width="256px"></img> |
+|---|---|
+| *a man painting a completely red image* | *a psychedelic experience on LSD* |
 
 ## What is this?
 
@@ -50,18 +34,69 @@ This will require that you have an Nvidia GPU or AMD GPU
 
 ## Install
 
+### Linux
+
+Install using `pip`. It is always recommended to use a virtualenv, especially if you are exploring multiple projects which use Torch, Tensorflow, etc.
+
 ```bash
+$ python3 -m venv env
+$ source env/bin/activate
 $ pip install deep-daze
 ```  
 
 ### Windows Install
 
-<img src="./instruction_images/Windows/Step_1_DD_Win.png" width="480px"></img>
+Install Python 3.6+ and install using `pip`. Like with Linux you shouldn't install this globally. If you have more than one Python installation confirm which is mapped in your path.
 
-Presuming Python is installed: 
-- Open command prompt and navigate to the directory of your current version of Python
 ```bash
-  pip install deep-daze
+> python --version
+Python 3.9.2
+```
+
+Or
+
+```bash
+> python3 --version
+Python 3.9.2
+```
+
+Create your virtualenv and install the package.
+
+```bash
+> python -m venv env
+> .\env\Scripts\activate
+> pip install deep-daze
+```
+
+### Verifying your Installation
+
+Check that your Torch package was installed with CUDA enabled by running this one liner.
+
+```bash
+python -c "import torch; x = (torch.cuda.get_device_name(0) if torch.cuda.is_available() else None); print(x)"
+```
+
+If the only output is `None` then you need to confirm that the CUDA drivers are installed and accessible. This will apply to Windows and Linux systems.
+
+Windows with a RTX 2070
+
+```bash
+> python -c "import torch; x = (torch.cuda.get_device_name(0) if torch.cuda.is_available() else None); print(x)"
+NVIDIA GeForce RTX 2070
+```
+
+An AWS Deep Learning instance with a Tesla T4.
+
+```bash
+$ python -c "import torch; x = (torch.cuda.get_device_name(0) if torch.cuda.is_available() else None); print(x)"
+Tesla T4
+```
+
+A Windows laptop **without** the CUDA drivers installed.
+
+```bash
+> python -c "import torch; x = (torch.cuda.get_device_name(0) if torch.cuda.is_available() else None); print(x)"
+None
 ```
 
 ## Examples
@@ -71,17 +106,12 @@ $ imagine "a house in the forest"
 ```
 For Windows:
 
-<img src="./instruction_images/Windows/Step_2_DD_Win.png" width="480px"></img>
-
-- Open command prompt as administrator
 ```bash
-  imagine "a house in the forest"
+> .\env\Scripts\activate
+> imagine "a house in the forest"
 ```
 
-That's it.
-
-
-If you have enough memory, you can get better quality by adding a `--deeper` flag
+That's it. If you have enough memory, you can get better quality by adding a `--deeper` flag
 
 ```bash
 $ imagine "shattered plates on the ground" --deeper
@@ -103,52 +133,36 @@ NAME
     imagine
 
 SYNOPSIS
-    imagine TEXT <flags>
-
-POSITIONAL ARGUMENTS
-    TEXT
-        (required) A phrase less than 77 tokens which you would like to visualize.
+    imagine <flags>
 
 FLAGS
-    --img=IMAGE_PATH
+    --text=TEXT
+        Type: Optional[]
         Default: None
-        Path to png/jpg image or PIL image to optimize on
-    --encoding=ENCODING
+        (required) A phrase less than 77 characters which you would 
+        like to visualize.
+    --img=IMG
+        Type: Optional[]
         Default: None
-        User-created custom CLIP encoding. If used, replaces any text or image that was used.
-    --create_story=CREATE_STORY
-        Default: False
-        Creates a story by optimizing each epoch on a new sliding-window of the input words. If this is enabled, much longer texts than 77 tokens can be used. Requires save_progress to visualize the transitions of the story.
-    --story_start_words=STORY_START_WORDS
-        Default: 5
-        Only used if create_story is True. How many words to optimize on for the first epoch.
-    --story_words_per_epoch=STORY_WORDS_PER_EPOCH
-        Default: 5
-        Only used if create_story is True. How many words to add to the optimization goal per epoch after the first one.
-    --story_separator:
-        Default: None
-        Only used if create_story is True. Defines a separator like '.' that splits the text into groups for each epoch. Separator needs to be in the text otherwise it will be ignored
-    --lower_bound_cutout=LOWER_BOUND_CUTOUT
-        Default: 0.1
-        Lower bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should be smaller than 0.8.
-    --upper_bound_cutout=UPPER_BOUND_CUTOUT
-        Default: 1.0
-        Upper bound of the sampling of the size of the random cut-out of the SIREN image per batch. Should probably stay at 1.0.
-    --saturate_bound=SATURATE_BOUND
-        Default: False
-        If True, the LOWER_BOUND_CUTOUT is linearly increased to 0.75 during training.
+        The path to a jpg or png image which you would like to imagine. 
+        Can be combined with text.
     --learning_rate=LEARNING_RATE
         Default: 1e-05
         The learning rate of the neural net.
     --num_layers=NUM_LAYERS
         Default: 16
         The number of hidden layers to use in the Siren neural net.
+    --hidden_size=HIDDEN_SIZE
+        Default: 256
+        The hidden layer size of the Siren net.
     --batch_size=BATCH_SIZE
         Default: 4
-        The number of generated images to pass into Siren before calculating loss. Decreasing this can lower memory and accuracy.
+        The number of generated images to pass into Siren before calculating loss. 
+        Decreasing this can lower memory and accuracy.
     --gradient_accumulate_every=GRADIENT_ACCUMULATE_EVERY
         Default: 4
-        Calculate a weighted loss of n samples for each iteration. Increasing this can help increase accuracy with lower batch sizes.
+        Calculate a weighted loss of n samples for each iteration. 
+        Increasing this can help increase accuracy with lower batch sizes.
     --epochs=EPOCHS
         Default: 20
         The number of epochs to run.
@@ -168,7 +182,7 @@ FLAGS
         Default: False
         Whether or not to overwrite existing generated images of the same name.
     --save_progress=SAVE_PROGRESS
-        Default: False
+        Default: True
         Whether or not to save images generated before training Siren is complete.
     --seed=SEED
         Type: Optional[]
@@ -179,22 +193,108 @@ FLAGS
         Whether or not to open a folder showing your generated images.
     --save_date_time=SAVE_DATE_TIME
         Default: False
-        Save files with a timestamp prepended e.g. `%y%m%d-%H%M%S-my_phrase_here`
+        Save files with a timestamp prepended 
+        e.g. `%y%m%d-%H%M%S-my_phrase_here.png`
     --start_image_path=START_IMAGE_PATH
+        Type: Optional[]
         Default: None
-        The generator is trained first on a starting image before steered towards the textual input
+        Path to the image you would like to prime the generator with initially
     --start_image_train_iters=START_IMAGE_TRAIN_ITERS
         Default: 50
-        The number of steps for the initial training on the starting image
+        Number of iterations for priming, defaults to 50
     --theta_initial=THETA_INITIAL
-        Default: 30.0
-        Hyperparameter describing the frequency of the color space. Only applies to the first layer of the network.
-    --theta_hidden=THETA_INITIAL
-        Default: 30.0
-        Hyperparameter describing the frequency of the color space. Only applies to the hidden layers of the network.
+        Type: Optional[]
+        Default: None
+        Hyperparameter describing the frequency of the color space. 
+        Only applies to the first layer of the network.
+    --theta_hidden=THETA_HIDDEN
+        Type: Optional[]
+        Default: None
+        Hyperparameter describing the frequency of the color space. 
+        Only applies to the hidden layers of the network.
+    --start_image_lr=START_IMAGE_LR
+        Default: 0.0003
+        Learning rate for the start image training.
+    --lower_bound_cutout=LOWER_BOUND_CUTOUT
+        Default: 0.1
+        The lower bound for the cutouts used in generation.
+    --upper_bound_cutout=UPPER_BOUND_CUTOUT
+        Default: 1.0
+        The upper bound for the cutouts used in generation.
+    --saturate_bound=SATURATE_BOUND
+        Default: False
+        If True, the LOWER_BOUND_CUTOUT is linearly increased to 0.75 
+        during training.
+    --create_story=CREATE_STORY
+        Default: False
+        Creates a story by optimizing each epoch on a new sliding-window 
+        of the input words. If this is enabled, much longer texts than 77 
+        chars can be used. Requires save_progress to visualize the 
+        transitions of the story.
+    --story_start_words=STORY_START_WORDS
+        Default: 5
+        Only used if create_story is True. How many words to optimize 
+        on for the first epoch.
+    --story_words_per_epoch=STORY_WORDS_PER_EPOCH
+        Default: 5
+        Only used if create_story is True. How many words to add to the 
+        optimization goal per epoch after the first one.
+    --story_separator=STORY_SEPARATOR
+        Type: Optional[]
+        Default: None
+        Only used if create_story is True. Defines a separator like '.' that 
+        splits the text into groups for each epoch. Separator needs to be in 
+        the text otherwise it will be ignored!
+    --averaging_weight=AVERAGING_WEIGHT
+        Default: 0.3
+        How much to weigh the averaged features of the random cutouts over the 
+        individual random cutouts. Increasing this value leads to more details 
+        being represented at the cost of some global coherence and a 
+        parcellation into smaller scenes.
+    --gauss_sampling=GAUSS_SAMPLING
+        Default: False
+        Whether to use sampling from a Gaussian distribution instead of a 
+        uniform distribution.
+    --gauss_mean=GAUSS_MEAN
+        Default: 0.6
+        The mean of the Gaussian sampling distribution.
+    --gauss_std=GAUSS_STD
+        Default: 0.2
+        The standard deviation of the Gaussian sampling distribution.
+    --do_cutout=DO_CUTOUT
+        Default: True
+    --center_bias=CENTER_BIAS
+        Default: False
+        Whether to use a Gaussian distribution centered around the center of 
+        the image to sample the locations of random cutouts instead of a 
+        uniform distribution. Leads to the main generated objects to be more 
+        focused in the center.
+    --center_focus=CENTER_FOCUS
+        Default: 2
+        How much to focus on the center if using center_bias. 
+        
+        std = sampling_range / center_focus. 
+        
+        High values lead to a very correct representation in the center but 
+        washed out colors and details towards the edges,
+    --jit=JIT
+        Default: True
+        Whether to use the jit-compiled CLIP model. The jit model is faster, 
+        but only compatible with torch version 1.7.1.
     --save_gif=SAVE_GIF
         Default: False
-        Whether or not to save a GIF animation of the generation procedure. Only works if save_progress is set to True.
+        Only used if save_progress is True. Saves a GIF animation of the 
+        generation procedure using the saved frames.
+    --save_video=SAVE_VIDEO
+        Default: False
+        Only used if save_progress is True. Saves a MP4 animation of the 
+        generation procedure using the saved frames.
+    --model_name=MODEL_NAME
+        Default: 'ViT-B/32'
+        The model name to use. Options are RN50, RN101, RN50x4, and ViT-B/32.
+    --optimizer=OPTIMIZER
+        Default: 'AdamP'
+        The optimizer to use. options are Adam, AdamP, and DiffGrad.
 ```
 
 ### Priming
@@ -207,14 +307,9 @@ Simply specify the path to the image you wish to use, and optionally the number 
 $ imagine 'a clear night sky filled with stars' --start_image_path ./cloudy-night-sky.jpg
 ```
 
-Primed starting image
-
-<img src="./samples/prime-orig.jpg" width="256px"></img>
-
-Then trained with the prompt `A pizza with green pepper.`
-
-<img src="./samples/prime-trained.png" width="256px"></img>
-
+| <img src="./samples/prime-orig.jpg" width="256px"></img> | <img src="./samples/prime-trained.png" width="256px"></img> |
+|---|---|
+| Primed starting image | Then trained with the prompt `A pizza with green pepper.`
 
 ### Optimize for the interpretation of an image
 
@@ -222,21 +317,15 @@ We can also feed in an image as an optimization goal, instead of only priming th
 ```bash
 $ imagine --img samples/Autumn_1875_Frederic_Edwin_Church.jpg
 ```
-Original image:
 
-<img src="./samples/Autumn_1875_Frederic_Edwin_Church_original.jpg" width="256px"></img>
+| <img src="./samples/Autumn_1875_Frederic_Edwin_Church_original.jpg" width="256px"></img> | <img src="./samples/Autumn_1875_Frederic_Edwin_Church.jpg" width="256px"></img> |
+|---|---|
+| Original image | The network's interpretation |
 
-The network's interpretation:  
 
-<img src="./samples/Autumn_1875_Frederic_Edwin_Church.jpg" width="256px"></img>
-
-Original image:
-
-<img src="./samples/hot-dog.jpg" width="256px"></img>
-
-The network's interpretation:  
-
-<img src="./samples/hot-dog_imagined.png" width="256px"></img>
+| <img src="./samples/hot-dog.jpg" width="256px"></img> | <img src="./samples/hot-dog_imagined.png" width="256px"></img> |
+|---|---|
+| Original image | The network's interpretation |
 
 #### Optimize for text and image combined
 
@@ -246,17 +335,15 @@ $ imagine "A psychedelic experience." --img samples/hot-dog.jpg
 The network's interpretation:  
 <img src="./samples/psychedelic_hot_dog.png" width="256px"></img>
 
-
 ### New: Create a story
-The regular mode for texts only allows 77 tokens. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`.
+The regular mode for texts only allows 77 tokens. If you want to visualize a full story/paragraph/song/poem, set `create_story` to `True`. Given the poem below:
 
-Given the poem “Stopping by Woods On a Snowy Evening” by Robert Frost - 
+> Stopping by Woods On a Snowy Evening” by Robert Frost - 
 "Whose woods these are I think I know. His house is in the village though; He will not see me stopping here To watch his woods fill up with snow. My little horse must think it queer To stop without a farmhouse near Between the woods and frozen lake The darkest evening of the year. He gives his harness bells a shake To ask if there is some mistake. The only other sound’s the sweep Of easy wind and downy flake. The woods are lovely, dark and deep, But I have promises to keep, And miles to go before I sleep, And miles to go before I sleep.".
 
 We get:
 
 https://user-images.githubusercontent.com/19983153/109539633-d671ef80-7ac1-11eb-8d8c-380332d7c868.mp4
-
 
 
 ### Python
