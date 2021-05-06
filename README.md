@@ -117,6 +117,20 @@ That's it. If you have enough memory, you can get better quality by adding a `--
 $ imagine "shattered plates on the ground" --deeper
 ```
 
+By default this will output an image every 100 iterations, and 20 epochs with 1050 iterations results in 210 images from where you are running it. You can pass the `--output_folder` parameter and it will recursively create the directories and place the generated files in there instead of where you ran the command.
+
+For Linux
+
+```bash
+$ imagine "a house in the forest" --output_folder="~/deep/thoughts"
+```
+
+For Windows
+
+```bash
+$ imagine "a house in the forest" --output_folder="C:\users\name\Documents\deepthoughts"
+```
+
 ### Advanced
 
 In true deep learning fashion, more layers will yield better results. Default is at `16`, but can be increased to `32` depending on your resources.
@@ -188,6 +202,11 @@ FLAGS
         Type: Optional[]
         Default: None
         A seed to be used for deterministic runs.
+    --output_folder=OUTPUT_FOLDER
+        Type: Optional[]
+        Default: None
+        The path to the folder to output the generated images, otherwise it will 
+        generate them in the directory you are running it from.
     --open_folder=OPEN_FOLDER
         Default: True
         Whether or not to open a folder showing your generated images.

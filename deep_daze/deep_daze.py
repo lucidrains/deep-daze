@@ -272,7 +272,6 @@ class Imagine(nn.Module):
             upper_bound_cutout=1.0,
             saturate_bound=False,
             averaging_weight=0.3,
-
             create_story=False,
             story_start_words=5,
             story_words_per_epoch=5,
@@ -288,6 +287,7 @@ class Imagine(nn.Module):
             hidden_size=256,
             save_gif=False,
             save_video=False,
+            output_folder=None
     ):
 
         super().__init__()
@@ -390,6 +390,7 @@ class Imagine(nn.Module):
         self.text = text
         self.image = img
         self.textpath = create_text_path(self.perceptor.context_length, text=text, img=img, encoding=clip_encoding, separator=story_separator)
+        self.output_folder = output_folder
         self.filename = self.image_output_path()
         
         # create coding to optimize for
@@ -488,14 +489,21 @@ class Imagine(nn.Module):
         Sequence number left padded with 6 zeroes is appended if `save_every` is set.
         :rtype: Path
         """
-        output_path = self.textpath
+        output_filename = self.textpath
         if sequence_number:
             sequence_number_left_padded = str(sequence_number).zfill(6)
-            output_path = f"{output_path}.{sequence_number_left_padded}"
+            output_filename = f"{output_filename}.{sequence_number_left_padded}"
         if self.save_date_time:
             current_time = datetime.now().strftime("%y%m%d-%H%M%S_%f")
-            output_path = f"{current_time}_{output_path}"
-        return Path(f"{output_path}.jpg")
+            output_filename = f"{current_time}_{output_filename}"
+        if self.output_folder:
+            if not os.path.exists(self.output_folder):
+                tqdm.write(f"Creating output path {self.output_folder}")
+                os.makedirs(self.output_folder, exist_ok=True)
+            output_path = Path(self.output_folder) / f"{output_filename}.jpg"
+        else:
+            output_path = Path(f"{output_filename}.jpg")
+        return output_path
 
     def train_step(self, epoch, iteration):
         total_loss = 0
@@ -574,7 +582,10 @@ class Imagine(nn.Module):
             self.model(self.clip_encoding, dry_run=True) # do one warmup step due to potential issue with CLIP and CUDA
 
         if self.open_folder:
-            open_folder('./')
+            if self.output_folder:
+                open_folder(self.output_folder)
+            else:
+                open_folder('./')
             self.open_folder = False
 
         try:

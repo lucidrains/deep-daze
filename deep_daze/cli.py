@@ -19,6 +19,7 @@ def train(
         image_width=512,
         deeper=False,
         overwrite=False,
+        output_folder=None,
         save_progress=True,
         seed=None,
         open_folder=True,
@@ -61,6 +62,7 @@ def train(
     :param save_progress: Whether or not to save images generated before training Siren is complete.
     :param save_every: Generate an image every time iterations is a multiple of this number.
     :param open_folder:  Whether or not to open a folder showing your generated images.
+    :param output_folder: The path to the folder to output the generated images, otherwise it will generate them in the directory you are running it from.
     :param overwrite: Whether or not to overwrite existing generated images of the same name.
     :param deeper: Uses a Siren neural net with 32 hidden layers.
     :param image_width: The desired resolution of the image.
@@ -138,6 +140,7 @@ def train(
         optimizer=optimizer,
         save_gif=save_gif,
         save_video=save_video,
+        output_folder=output_folder
     )
 
     print('Starting up...')
