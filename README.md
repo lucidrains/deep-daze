@@ -1,19 +1,13 @@
 ## Deep Daze
-
-| <img src="./samples/Mist_over_green_hills.jpg" width="256px"></img> | <img src="./samples/Shattered_plates_on_the_grass.jpg" width="256px"></img> |
+| | |
 |---|---|
+| <img src="./samples/Mist_over_green_hills.jpg" width="256px"></img> | <img src="./samples/Shattered_plates_on_the_grass.jpg" width="256px"></img> 
 | *mist over green hills* | *shattered plates on the grass* |
-
 | <img src="./samples/Cosmic_love_and_attention.jpg" width="256px"></img> | <img src="./samples/A_time_traveler_in_the_crowd.jpg" width="256px"></img> |
-|---|---|
 | *cosmic love and attention* | *a time traveler in the crowd* |
-
 | <img src="./samples/Life_during_the_plague.jpg" width="256px"></img>| <img src="./samples/Meditative_peace_in_a_sunlit_forest.jpg" width="256px"></img> |
-|---|---|
 | *life during the plague* | *meditative peace in a sunlit forest* |
-
 | <img src="./samples/A_man_painting_a_completely_red_image.png" width="256px"></img> | <img src="./samples/A_psychedelic_experience_on_LSD.png" width="256px"></img> |
-|---|---|
 | *a man painting a completely red image* | *a psychedelic experience on LSD* |
 
 ## What is this?
@@ -36,7 +30,7 @@ This will require that you have an Nvidia GPU or AMD GPU
 
 ### Linux
 
-Install using `pip`. It is always recommended to use a virtualenv, especially if you are exploring multiple projects which use Torch, Tensorflow, etc.
+Install using `pip`. It's always recommended to use a virtualenv if you are exploring several projects which use Torch, Tensorflow, etc.
 
 ```bash
 $ python3 -m venv env
@@ -46,14 +40,14 @@ $ pip install deep-daze
 
 ### Windows Install
 
-Install Python 3.6+ and install using `pip`. Like with Linux you shouldn't install this globally. If you have more than one Python installation confirm which is mapped in your path.
+Install Python 3.6+ and install using `pip`. Like with Linux you shouldn't install this globally. If you have more than one Python installation confirm which is set in your path.
 
 ```bash
 > python --version
 Python 3.9.2
 ```
 
-Or
+Or if you have Python 2 and 3 installed.
 
 ```bash
 > python3 --version
