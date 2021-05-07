@@ -390,7 +390,7 @@ class Imagine(nn.Module):
         self.text = text
         self.image = img
         self.textpath = create_text_path(self.perceptor.context_length, text=text, img=img, encoding=clip_encoding, separator=story_separator)
-        self.output_folder = output_folder
+        self.output_folder = str(output_folder)
         self.filename = self.image_output_path()
         
         # create coding to optimize for
