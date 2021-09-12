@@ -400,7 +400,7 @@ class Imagine(nn.Module):
         self.start_image_lr = start_image_lr
         if exists(start_image_path):
             file = Path(start_image_path)
-            assert file.exists(), f'file does not exist at given starting image path {self.start_image_path}'
+            assert file.exists(), f'file does not exist at given starting image path {start_image_path}'
             image = Image.open(str(file))
             start_img_transform = T.Compose([T.Resize(image_width),
                                              T.CenterCrop((image_width, image_width)),
