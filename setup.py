@@ -32,7 +32,7 @@ setup(
     'ftfy',
     'imageio>=2.9.0',
     'siren-pytorch>=0.0.8',
-    'torch>=1.7.1',
+    'torch>=1.10',
     'torch_optimizer',
     'torchvision>=0.8.2',
     'tqdm',
